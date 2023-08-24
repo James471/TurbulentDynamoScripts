@@ -51,8 +51,6 @@ def getNewFigYLim(data):
     low = max(dataMin, dataMax / (10**10))
     high = dataMax * 10
 
-    print(dataMax)
-
     return (low, high)
 
 
@@ -151,7 +149,6 @@ def addPlot(args, fig, axes, isNewFig):
     ax_vrms.legend()
 
     adjustPlotAxis(args, fig, axes, isNewFig, f)
-    pl.show()
 
 
 def parseArgs(args):
@@ -173,6 +170,10 @@ def main(args, fig=None, axes=None):
 
     addPlot(args, fig, axes, isNewFig)
 
+    if args.save:
+        print("Saving the figure at", args.i + "/Turb.png")
+        fig.savefig(args.i + "/Turb.png", dpi=250)
+
     return fig, axes
 
 
@@ -182,6 +183,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("-i", required=True, type=str, help="Input directory")
     parser.add_argument("-t", type=float, help="1 turn over time")
+    parser.add_argument("-save", action="store_true", help="Save the figure")
     parser.add_argument(
         "-ylim_mag", type=float, nargs=2, help="Y-axis limits for E_mag plot"
     )
