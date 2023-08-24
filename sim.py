@@ -357,13 +357,21 @@ def runSimulation(args):
 
 
 def main():
+    print("Creating output directory")
     createOutputDirectory(args)
+    print("Creating simulation object directory")
     createSimulationObjectDirectory(args)
+    print("Creating info dump file")
     createInfoDumpFile(args)
+    print("Creating flash.par")
     createFlashPar(args)
+    print("Creating TurbGen.par")
     createTurbGenPar(args)
+    print("Creating flash executable")
     createFlashExec(args)
+    print("Creating symbolic link to flash executable")
     createFlashSymLink(args)
+    print("Running simulation")
     runSimulation(args)
 
 
