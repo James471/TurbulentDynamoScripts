@@ -5,8 +5,8 @@ import pickle
 import textwrap
 import common
 
-def argsToSolverSetupParams(args):
 
+def argsToSolverSetupParams(args):
     solverSetupParams = ""
     if args.solver == "bk-usm" or args.solver == "Roe" or args.solver == "HLLC":
         solverSetupParams += "+usm"
@@ -14,8 +14,8 @@ def argsToSolverSetupParams(args):
         solverSetupParams += "+bouchut"
     return solverSetupParams
 
+
 def getFlashParSolverParams(args):
-    
     if args.solver == "bk-usm":
         return f"""
         RiemannSolver = "HLL5R"
@@ -30,42 +30,60 @@ def getFlashParSolverParams(args):
         RiemannSolver = "HLLC"
         """
 
+
 def getFlashParMiscParams(args):
-    
     def getEUpwind(args):
         return ".true." if args.E_upwind else ".false."
+
     return f"""
     E_upwind = {getEUpwind(args)}
     """
 
-def createOutputDirectory(args):
 
+def createOutputDirectory(args):
     if not os.path.exists(args.outdir):
         os.makedirs(args.outdir)
 
     outputDirName = common.argsToOutdirName(args)
 
     if os.path.exists(outputDirName):
-        deleteExistingDir = input("Output directory"+outputDirName+" already exists. Do you want to delete it? (y/n): ")
-        if deleteExistingDir == 'y':
-            os.system("rm -rf "+outputDirName)
+        deleteExistingDir = input(
+            "Output directory"
+            + outputDirName
+            + " already exists. Do you want to delete it? (y/n): "
+        )
+        if deleteExistingDir == "y":
+            os.system("rm -rf " + outputDirName)
         else:
             print("Exiting...")
             exit(0)
     os.makedirs(outputDirName)
 
+
 def createSimulationObjectDirectory(args):
-    
     solverSetupParams = argsToSolverSetupParams(args)
     objDirectory = common.argsToSimulationObjectDirectory(args)
 
-    createSimulationCmd = args.flash_path+"/setup StirFromFile -auto -objdir="+objDirectory+" -3d -nxb="+str(args.nxb)+" -nyb="+str(args.nyb)+" -nzb="+str(args.nzb)+" +ug "+solverSetupParams+" +stir_ics +polytropic_eos -parfile=flash.par.james"
+    createSimulationCmd = (
+        args.flash_path
+        + "/setup StirFromFile -auto -objdir="
+        + objDirectory
+        + " -3d -nxb="
+        + str(args.nxb)
+        + " -nyb="
+        + str(args.nyb)
+        + " -nzb="
+        + str(args.nzb)
+        + " +ug "
+        + solverSetupParams
+        + " +stir_ics +polytropic_eos -parfile=flash.par.james"
+    )
     os.system(createSimulationCmd)
 
+
 def createInfoDumpFile(args):
-    
     infoDict = {}
-    
+
     infoDict["simulation"] = "Turbulent Dynamo"
     infoDict["dimensions"] = "3d"
     infoDict["v"] = args.v
@@ -85,20 +103,21 @@ def createInfoDumpFile(args):
     infoDict["jprocs"] = args.jprocs
     infoDict["kprocs"] = args.kprocs
     infoDict["extra"] = args.extra
+    infoDict["turnover_time"] = 1 / (2 * args.v)
 
-    infoFilePath = common.argsToOutdirName(args)+"/info.pkl"
+    infoFilePath = common.argsToOutdirName(args) + "/info.pkl"
     with open(infoFilePath, "wb") as infoFile:
         pickle.dump(infoDict, infoFile)
 
-def createFlashPar(args):
-    
-    turnOverTime = 1/(2*args.v)
-    tmax = args.nt*turnOverTime
-    checkpointFileIntervalTime = 0.1*tmax
-    plotFileIntervalTime = args.dt*turnOverTime
 
-    flashParFile = open(common.argsToOutdirName(args)+"/flash.par", "w")
-    
+def createFlashPar(args):
+    turnOverTime = 1 / (2 * args.v)
+    tmax = args.nt * turnOverTime
+    checkpointFileIntervalTime = 0.1 * tmax
+    plotFileIntervalTime = args.dt * turnOverTime
+
+    flashParFile = open(common.argsToOutdirName(args) + "/flash.par", "w")
+
     flashParFileContent = f"""
     {getFlashParSolverParams(args)}
     {getFlashParMiscParams(args)}
@@ -271,9 +290,9 @@ def createFlashPar(args):
     flashParFile.write(textwrap.dedent(flashParFileContent).strip())
     flashParFile.close()
 
+
 def createTurbGenPar(args):
-    
-    turbGenParFile = open(common.argsToOutdirName(args)+"/TurbGen.par", "w")
+    turbGenParFile = open(common.argsToOutdirName(args) + "/TurbGen.par", "w")
 
     turbGenParFileContent = f"""
     # ********************************************************************************
@@ -314,22 +333,28 @@ def createTurbGenPar(args):
     turbGenParFile.write(textwrap.dedent(turbGenParFileContent).strip())
     turbGenParFile.close()
 
+
 def createFlashExec(args):
     currentPath = os.getcwd()
     os.chdir(common.argsToSimulationObjectDirectory(args))
     os.system("make -j 20")
     os.chdir(currentPath)
 
+
 def createFlashSymLink(args):
-    #If the target of a symbolic link is a relative path, it's interpreted relative to the 
+    # If the target of a symbolic link is a relative path, it's interpreted relative to the
     # directory containing the link, not the directory you were in when you created it.
-    os.system("ln -sv objStirFromFile/flash4 "+common.argsToOutdirName(args)+"/flash4")
+    os.system(
+        "ln -sv objStirFromFile/flash4 " + common.argsToOutdirName(args) + "/flash4"
+    )
+
 
 def runSimulation(args):
     currentPath = os.getcwd()
     os.chdir(common.argsToOutdirName(args))
-    os.system("mpirun -np "+str(args.iprocs*args.jprocs*args.kprocs)+" flash4")
+    os.system("mpirun -np " + str(args.iprocs * args.jprocs * args.kprocs) + " flash4")
     os.chdir(currentPath)
+
 
 def main():
     createOutputDirectory(args)
@@ -347,31 +372,66 @@ def parseArgs(args):
 
 
 if __name__ == "__main__":
-    
-    parser = argparse.ArgumentParser(description="Run a simulation of a turbulent dynamo.")
+    parser = argparse.ArgumentParser(
+        description="Run a simulation of a turbulent dynamo."
+    )
     parser.add_argument("-v", default=1.0, type=float, help="Velocity amplitude")
-    parser.add_argument("-auto_adjust", default=0, type=int,
-                        help="Automatically adjust the velocity amplitude")
-    parser.add_argument("-solver", default="bk-usm", 
-                        choices=["HLLC", "Roe", "bk-usm", "bouchut-split"], 
-                        type=str, help="Solver to use")
+    parser.add_argument(
+        "-auto_adjust",
+        default=0,
+        type=int,
+        help="Automatically adjust the velocity amplitude",
+    )
+    parser.add_argument(
+        "-solver",
+        default="bk-usm",
+        choices=["HLLC", "Roe", "bk-usm", "bouchut-split"],
+        type=str,
+        help="Solver to use",
+    )
     parser.add_argument("-mcut", default=0.1, type=float, help="Low mach cutoff")
     parser.add_argument("-outdir", default=".", type=str, help="Output directory")
-    parser.add_argument("-sol_weight", default=0.5, type=str, 
-                        help="1.0: solenoidal driving, 0.0: compressive driving, 0.5: natural mixture")
+    parser.add_argument(
+        "-sol_weight",
+        default=0.5,
+        type=str,
+        help="1.0: solenoidal driving, 0.0: compressive driving, 0.5: natural mixture",
+    )
     parser.add_argument("-cfl", default=0.5, type=float, help="CFL number")
     parser.add_argument("-E_upwind", default=True, type=bool, help="Use E_upwind")
     parser.add_argument("-nt", default=100, type=float, help="Number of turnover times")
-    parser.add_argument("-dt", default=0.1, type=float, help="Fraction of turnover time for plotfile dump")
-    parser.add_argument("-iprocs", default=4, type=int, help="Number of processors in i-direction")
-    parser.add_argument("-jprocs", default=4, type=int, help="Number of processors in j-direction")
-    parser.add_argument("-kprocs", default=4, type=int, help="Number of processors in k-direction")
-    parser.add_argument("-nxb", default=32, type=int, help="Number of blocks in i-direction")
-    parser.add_argument("-nyb", default=32, type=int, help="Number of blocks in j-direction")
-    parser.add_argument("-nzb", default=32, type=int, help="Number of blocks in k-direction")
-    parser.add_argument("-flash_path", default="/home/james471/Academics/Projects/MHD/Code/flash-rsaa",
-                        help="Path to flash directory")
-    parser.add_argument("-extra", type=str, help="Extra arguments to pass to the simulation")
+    parser.add_argument(
+        "-dt",
+        default=0.1,
+        type=float,
+        help="Fraction of turnover time for plotfile dump",
+    )
+    parser.add_argument(
+        "-iprocs", default=4, type=int, help="Number of processors in i-direction"
+    )
+    parser.add_argument(
+        "-jprocs", default=4, type=int, help="Number of processors in j-direction"
+    )
+    parser.add_argument(
+        "-kprocs", default=4, type=int, help="Number of processors in k-direction"
+    )
+    parser.add_argument(
+        "-nxb", default=32, type=int, help="Number of blocks in i-direction"
+    )
+    parser.add_argument(
+        "-nyb", default=32, type=int, help="Number of blocks in j-direction"
+    )
+    parser.add_argument(
+        "-nzb", default=32, type=int, help="Number of blocks in k-direction"
+    )
+    parser.add_argument(
+        "-flash_path",
+        default="/home/james471/Academics/Projects/MHD/Code/flash-rsaa",
+        help="Path to flash directory",
+    )
+    parser.add_argument(
+        "-extra", type=str, help="Extra arguments to pass to the simulation"
+    )
 
     args = parseArgs(parser.parse_args())
 
