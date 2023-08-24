@@ -88,7 +88,9 @@ def adjustPlotAxis(args, fig, axes, isNewFig, f):
             else getNewFigYLim(f[E_KIN_COLUMN_INDEX] / [E_MAG_COLUMN_INDEX])
             if isNewFig
             else getOldFigYLim(
-                f[E_KIN_COLUMN_INDEX] / [E_MAG_COLUMN_INDEX], fig, axes[E_RATIO_AXIS_INDEX]
+                f[E_KIN_COLUMN_INDEX] / [E_MAG_COLUMN_INDEX],
+                fig,
+                axes[E_RATIO_AXIS_INDEX],
             )
         )
         print(f"Setting ylim_ratio to {ylim_ratio}")
@@ -186,8 +188,12 @@ if __name__ == "__main__":
     parser.add_argument(
         "-ylim_ratio", type=float, nargs=2, help="Y-axis limits for E_mag/ERot plot"
     )
-    parser.add_argument("-no_adj_ratio", action="store_true", help="Don't adjust Ekin/Emag axis")
-    parser.add_argument("-no_adj_mag", action="store_true", help="Don't adjust Emag axis")
+    parser.add_argument(
+        "-no_adj_ratio", action="store_true", help="Don't adjust Ekin/Emag axis"
+    )
+    parser.add_argument(
+        "-no_adj_mag", action="store_true", help="Don't adjust Emag axis"
+    )
     parser.add_argument("-e", type=str, help="Extra info to put in the title")
 
     args = parseArgs(parser.parse_args())
