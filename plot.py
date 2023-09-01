@@ -23,25 +23,26 @@ def getInfoDict(args):
     return None
 
 
-def getSolverInfo(args):
+def getPlotLabel(args):
     infoDict = getInfoDict(args)
     if infoDict == None:
         return "Unknown" if args.e is None else args.e
-    if infoDict["solver"] == "bk-usm":
+    elif infoDict["solver"] == "bk-usm":
         return f"BK-USM, Cut={infoDict['mcut']}"
     else:
         return f"{infoDict['solver']}"
 
 
 def addPlotInfo(args, fig, axes, isNewFig):
-    infoDict = getInfoDict(args)
-    if infoDict == None:
-        fig.suptitle("Unknown" if args.e is None else args.e)
-        return
+    # Title for old plots will not be changed
     if isNewFig:
-        fig.suptitle(f"v={infoDict['v']}")
-    if args.e is not None:
-        fig.suptitle(fig.suptitle().get_text() + "\n" + args.e)
+        infoDict = getInfoDict(args)
+        if args.title is not None:
+            fig.suptitle(args.title)
+        elif args.title is None and infoDict is None:
+            fig.suptitle("Unknown")
+        elif args.title is None:
+            fig.suptitle(f"v={infoDict['v']}")
 
 
 def getNewFigYLim(data):
@@ -99,7 +100,7 @@ def getTurnOverTime(args):
     infoDict = getInfoDict(args)
     if infoDict == None:
         return args.t
-    return infoDict["turn_overtime"]
+    return infoDict["turnover_time"]
 
 
 def addPlot(args, fig, axes, isNewFig):
@@ -132,24 +133,33 @@ def addPlot(args, fig, axes, isNewFig):
     ax_emag.plot(
         f[TIME_COLUMN_INDEX] / turnOverTime,
         f[E_MAG_COLUMN_INDEX],
-        label=getSolverInfo(args),
+        label=getPlotLabel(args),
     )
     ax_emag.legend()
     ax_ratio.plot(
         f[TIME_COLUMN_INDEX] / turnOverTime,
         f[E_KIN_COLUMN_INDEX] / f[E_MAG_COLUMN_INDEX],
-        label=getSolverInfo(args),
+        label=getPlotLabel(args),
     )
     ax_ratio.legend()
     ax_vrms.plot(
         f[TIME_COLUMN_INDEX] / turnOverTime,
         f[V_RMS_COLUMN_INDEX],
-        label=getSolverInfo(args),
+        label=getPlotLabel(args),
     )
     ax_vrms.legend()
 
     adjustPlotAxis(args, fig, axes, isNewFig, f)
 
+
+def savePlot(args, fig):
+    if args.save:
+        if args.outdir is None:
+            print("Saving the figure at", args.i + "/Turb.png")
+            fig.savefig(args.i + "/Turb.png", dpi=250)
+        else:
+            print("Saving the figure at", args.outdir + "/Turb.png")
+            fig.savefig(args.outdir + "/Turb.png", dpi=250)
 
 def parseArgs(args):
     return args
@@ -169,10 +179,7 @@ def main(args, fig=None, axes=None):
         isNewFig = True
 
     addPlot(args, fig, axes, isNewFig)
-
-    if args.save:
-        print("Saving the figure at", args.i + "/Turb.png")
-        fig.savefig(args.i + "/Turb.png", dpi=250)
+    savePlot(args, fig)
 
     return fig, axes
 
@@ -182,7 +189,8 @@ if __name__ == "__main__":
         description="Script to automate visualization of FLASH simulation"
     )
     parser.add_argument("-i", required=True, type=str, help="Input directory")
-    parser.add_argument("-t", type=float, help="1 turn over time")
+    parser.add_argument("-outdir", type=str, help="Output directory")
+    parser.add_argument("-t", type=float, deafult=1, help="1 turn over time")
     parser.add_argument("-save", action="store_true", help="Save the figure")
     parser.add_argument(
         "-ylim_mag", type=float, nargs=2, help="Y-axis limits for E_mag plot"
@@ -196,7 +204,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "-no_adj_mag", action="store_true", help="Don't adjust Emag axis"
     )
-    parser.add_argument("-e", type=str, help="Extra info to put in the title")
+    parser.add_argument("-e", type=str, help="Extra info to put in the legend")
+    parser.add_argument("-title", type=str, help="Title of the plot")
 
     args = parseArgs(parser.parse_args())
     main(args)
