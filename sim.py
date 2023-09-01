@@ -356,7 +356,7 @@ def runSimulation(args):
     os.chdir(currentPath)
 
 
-def main():
+def main(args):
     print("Creating output directory")
     createOutputDirectory(args)
     print("Creating simulation object directory")
