@@ -19,14 +19,14 @@ def createComparisionPlot(dirs, extraArgs, title, outdir, ylim_mag=None,
     
     for i in range(len(dirs)):
         if i == 0:
-            fig, axes = plot.main(getArgsForDirPlot(dirs[i], False, extraArgs[i], title, outdir, 
-                                                    ylim_mag, ylim_ratio, no_adj_mag, no_adj_ratio, show))
+            save, fig, axes = False, None, None
         elif i == len(dirs) - 1:
-            plot.main(getArgsForDirPlot(dirs[i], True, extraArgs[i], title, outdir, 
-                                        ylim_mag, ylim_ratio, no_adj_mag, no_adj_ratio, show), fig, axes)
+            save = True
         else:
-            plot.main(getArgsForDirPlot(dirs[i], False, extraArgs[i], title, outdir, 
-                                        ylim_mag, ylim_ratio, no_adj_mag, no_adj_ratio, show), fig, axes,)
+            save = False
+
+        fig, axes = plot.main(getArgsForDirPlot(dirs[i], save, extraArgs[i], title, outdir, 
+                                                ylim_mag, ylim_ratio, no_adj_mag, no_adj_ratio, show), fig, axes)
 
 
 def createSim(simArgs):
@@ -66,7 +66,7 @@ def checkArgs(args):
     if args.mode == "dir":
         if args.extra is not None and len(args.extra) != 1:
             assert len(args.extra) == len(args.d_list), "Extra arguments must be specified for each directory"
-            
+
     elif args.mode == "sim":
         numSims = -1
         for key, value in vars(args).items():
