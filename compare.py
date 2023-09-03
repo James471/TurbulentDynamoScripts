@@ -5,88 +5,42 @@ import plot
 import common
 
 
-def getArgsForDirPlot(dir, save, extra, title, outdir, ylim_mag, ylim_ratio, no_adj_mag, no_adj_ratio, show):
+def getArgsForDirPlot(dir, save, extra, title, outdir, ylim_mag, 
+                      ylim_ratio, no_adj_mag, no_adj_ratio, show):
+    
     Object = lambda **kwargs: type("Object", (), kwargs)
-    return Object(
-        i=dir,
-        outdir=outdir,
-        t=1,
-        save=save,
-        ylim_mag=ylim_mag,
-        ylim_ratio=ylim_ratio,
-        no_adj_mag=no_adj_mag,
-        no_adj_ratio=no_adj_ratio,
-        show=show,
-        e=extra,
-        title=title,
-    )
+    return Object(i=dir, outdir=outdir, t=1, save=save, ylim_mag=ylim_mag, 
+                  ylim_ratio=ylim_ratio, no_adj_mag=no_adj_mag, 
+                  no_adj_ratio=no_adj_ratio, show=show, e=extra, title=title)
 
 
-def createComparisionPlot(dirs, extraArgs, title, outdir, ylim_mag=None, ylim_ratio=None, no_adj_mag=False, no_adj_ratio=False, show=False):
+def createComparisionPlot(dirs, extraArgs, title, outdir, ylim_mag=None, 
+                          ylim_ratio=None, no_adj_mag=False, no_adj_ratio=False, show=False):
+    
     for i in range(len(dirs)):
         if i == 0:
-            fig, axes = plot.main(
-                getArgsForDirPlot(dirs[i], False, extraArgs[i], title, outdir, ylim_mag, ylim_ratio, no_adj_mag, no_adj_ratio, show)
-            )
+            fig, axes = plot.main(getArgsForDirPlot(dirs[i], False, extraArgs[i], title, outdir, 
+                                                    ylim_mag, ylim_ratio, no_adj_mag, no_adj_ratio, show))
         elif i == len(dirs) - 1:
-            plot.main(
-                getArgsForDirPlot(dirs[i], True, extraArgs[i], title, outdir, ylim_mag, ylim_ratio, no_adj_mag, no_adj_ratio, show),
-                fig,
-                axes,
-            )
+            plot.main(getArgsForDirPlot(dirs[i], True, extraArgs[i], title, outdir, 
+                                        ylim_mag, ylim_ratio, no_adj_mag, no_adj_ratio, show), fig, axes)
         else:
-            plot.main(
-                getArgsForDirPlot(dirs[i], False, extraArgs[i], title, outdir, ylim_mag, ylim_ratio, no_adj_mag, no_adj_ratio, show),
-                fig,
-                axes,
-            )
+            plot.main(getArgsForDirPlot(dirs[i], False, extraArgs[i], title, outdir, 
+                                        ylim_mag, ylim_ratio, no_adj_mag, no_adj_ratio, show), fig, axes,)
 
 
 def createSim(simArgs):
     sim.main(simArgs)
 
 
-def getArgsForSim(
-    v,
-    auto_adjust,
-    solver,
-    mcut,
-    outdir,
-    sol_weight,
-    cfl,
-    E_upwind,
-    nt,
-    dt,
-    iprocs,
-    jprocs,
-    kprocs,
-    nxb,
-    nyb,
-    nzb,
-    flash_path,
-    extra,
-):
+def getArgsForSim(v, auto_adjust, solver, mcut, outdir, sol_weight, 
+                  cfl, E_upwind, nt, dt, iprocs, jprocs, kprocs, nxb, nyb, nzb, flash_path, extra):
+    
     Object = lambda **kwargs: type("Object", (), kwargs)
-    return Object(
-        v=v,
-        auto_adjust=auto_adjust,
-        solver=solver,
-        mcut=mcut,
-        outdir=outdir,
-        sol_weight=sol_weight,
-        cfl=cfl,
-        E_upwind=E_upwind,
-        nt=nt,
-        dt=dt,
-        iprocs=iprocs,
-        jprocs=jprocs,
-        kprocs=kprocs,
-        nxb=nxb,
-        nyb=nyb,
-        nzb=nzb,
-        flash_path=flash_path,
-        extra=extra,
-    )
+    return Object(v=v, auto_adjust=auto_adjust, solver=solver, mcut=mcut, outdir=outdir, 
+                  sol_weight=sol_weight, cfl=cfl, E_upwind=E_upwind, nt=nt, dt=dt, 
+                  iprocs=iprocs, jprocs=jprocs, kprocs=kprocs, nxb=nxb, nyb=nyb, nzb=nzb, 
+                  flash_path=flash_path, extra=extra)
 
 
 def main(args):
@@ -97,38 +51,22 @@ def main(args):
         numSim = len(args.v)
         dirList = []
         for i in range(numSim):
-            simArgs = getArgsForSim(
-                args.v[i],
-                args.auto_adjust[i],
-                args.solver[i],
-                args.mcut[i],
-                args.outdir,
-                args.sol_weight[i],
-                args.cfl[i],
-                args.E_upwind[i],
-                args.nt,
-                args.dt,
-                args.iprocs[i],
-                args.jprocs[i],
-                args.kprocs[i],
-                args.nxb[i],
-                args.nyb[i],
-                args.nzb[i],
-                args.flash_path,
-                args.extra[i],
-            )
+            simArgs = getArgsForSim(args.v[i], args.auto_adjust[i], args.solver[i], args.mcut[i], 
+                                    args.outdir, args.sol_weight[i], args.cfl[i], args.E_upwind[i], 
+                                    args.nt, args.dt, args.iprocs[i], args.jprocs[i], args.kprocs[i], 
+                                    args.nxb[i], args.nyb[i], args.nzb[i], args.flash_path, args.extra[i])
             dirList.append(args.outdir + "/" + common.argsToOutdirName(simArgs))
             createSim(simArgs)
     
-    createComparisionPlot(dirList, args.extra, args.title, args.outdir, args.ylim_mag, args.ylim_ratio, args.no_adj_mag, args.no_adj_ratio, args.show)
+    createComparisionPlot(dirList, args.extra, args.title, args.outdir, 
+                          args.ylim_mag, args.ylim_ratio, args.no_adj_mag, args.no_adj_ratio, args.show)
 
 
 def checkArgs(args):
     if args.mode == "dir":
         if args.extra is not None and len(args.extra) != 1:
-            assert len(args.extra) == len(
-                args.d_list
-            ), "Extra arguments must be specified for each directory"
+            assert len(args.extra) == len(args.d_list), "Extra arguments must be specified for each directory"
+            
     elif args.mode == "sim":
         numSims = -1
         for key, value in vars(args).items():
@@ -138,9 +76,7 @@ def checkArgs(args):
                     if numSims == -1:
                         numSims = len(value)
                     else:
-                        assert numSims == len(
-                            value
-                        ), "All arguments must have the same number of values unless you have common arguments"
+                        assert numSims == len(value), "All arguments must have the same number of values unless you have common arguments"
 
 
 def parseArgs(args):
