@@ -5,7 +5,7 @@ import plot
 import common
 
 
-def getArgsForDirPlot(dir, save, extra, title, outdir, ylim_mag, ylim_ratio, no_adj_mag, no_adj_ratio):
+def getArgsForDirPlot(dir, save, extra, title, outdir, ylim_mag, ylim_ratio, no_adj_mag, no_adj_ratio, show):
     Object = lambda **kwargs: type("Object", (), kwargs)
     return Object(
         i=dir,
@@ -16,26 +16,27 @@ def getArgsForDirPlot(dir, save, extra, title, outdir, ylim_mag, ylim_ratio, no_
         ylim_ratio=ylim_ratio,
         no_adj_mag=no_adj_mag,
         no_adj_ratio=no_adj_ratio,
+        show=show,
         e=extra,
         title=title,
     )
 
 
-def createComparisionPlot(dirs, extraArgs, title, outdir, ylim_mag=None, ylim_ratio=None, no_adj_mag=False, no_adj_ratio=False):
+def createComparisionPlot(dirs, extraArgs, title, outdir, ylim_mag=None, ylim_ratio=None, no_adj_mag=False, no_adj_ratio=False, show=False):
     for i in range(len(dirs)):
         if i == 0:
             fig, axes = plot.main(
-                getArgsForDirPlot(dirs[i], False, extraArgs[i], title, outdir, ylim_mag, ylim_ratio, no_adj_mag, no_adj_ratio)
+                getArgsForDirPlot(dirs[i], False, extraArgs[i], title, outdir, ylim_mag, ylim_ratio, no_adj_mag, no_adj_ratio, show)
             )
         elif i == len(dirs) - 1:
             plot.main(
-                getArgsForDirPlot(dirs[i], True, extraArgs[i], title, outdir, ylim_mag, ylim_ratio, no_adj_mag, no_adj_ratio),
+                getArgsForDirPlot(dirs[i], True, extraArgs[i], title, outdir, ylim_mag, ylim_ratio, no_adj_mag, no_adj_ratio, show),
                 fig,
                 axes,
             )
         else:
             plot.main(
-                getArgsForDirPlot(dirs[i], False, extraArgs[i], title, outdir, ylim_mag, ylim_ratio, no_adj_mag, no_adj_ratio),
+                getArgsForDirPlot(dirs[i], False, extraArgs[i], title, outdir, ylim_mag, ylim_ratio, no_adj_mag, no_adj_ratio, show),
                 fig,
                 axes,
             )
@@ -90,7 +91,7 @@ def getArgsForSim(
 
 def main(args):
     if args.mode == "dir":
-        createComparisionPlot(args.d_list, args.extra, args.title, args.outdir, args.ylim_mag, args.ylim_ratio, args.no_adj_mag, args.no_adj_ratio)
+        dirList = args.d_list
 
     elif args.mode == "sim":
         numSim = len(args.v)
@@ -118,7 +119,8 @@ def main(args):
             )
             dirList.append(args.outdir + "/" + common.argsToOutdirName(simArgs))
             createSim(simArgs)
-        createComparisionPlot(dirList, args.extra, args.title, args.outdir, args.ylim_mag, args.ylim_ratio, args.no_adj_mag, args.no_adj_ratio)
+    
+    createComparisionPlot(dirList, args.extra, args.title, args.outdir, args.ylim_mag, args.ylim_ratio, args.no_adj_mag, args.no_adj_ratio, args.show)
 
 
 def checkArgs(args):
@@ -130,7 +132,7 @@ def checkArgs(args):
     elif args.mode == "sim":
         numSims = -1
         for key, value in vars(args).items():
-            if key not in ["mode", "outdir", "title", "flash_path", "nt", "dt"]:
+            if key not in commonKeys:
                 print(key)
                 if value is not None and len(value) > 1:
                     if numSims == -1:
@@ -152,12 +154,12 @@ def parseArgs(args):
     elif args.mode == "sim":
         numSim = -1
         for key, value in vars(args).items():
-            if key not in ["mode", "outdir", "title", "flash_path", "nt", "dt"]:
+            if key not in commonKeys:
                 if value is not None and len(value) > 1:
                     numSim = len(value)
                     break
         for key, value in vars(args).items():
-            if key not in ["mode", "outdir", "title", "flash_path", "nt", "dt"]:
+            if key not in commonKeys:
                 if value is None:
                     setattr(args, key, [None for i in range(numSim)])
                 elif len(value) == 1:
@@ -165,6 +167,7 @@ def parseArgs(args):
 
     return args
 
+commonKeys = ["mode", "outdir", "title", "flash_path", "nt", "dt", "show", "ylim_mag", "ylim_ratio", "no_adj_mag", "no_adj_ratio"]
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -280,6 +283,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-no_adj_mag", action="store_true", help="Don't adjust Emag axis"
     )
+    parser.add_argument("-show", action="store_true", help="Show the figure")
 
     args = parseArgs(parser.parse_args())
 

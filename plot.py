@@ -160,6 +160,8 @@ def savePlot(args, fig):
         else:
             print("Saving the figure at", args.outdir + "/Turb.png")
             fig.savefig(args.outdir + "/Turb.png", dpi=250)
+    if args.show:
+        pl.show()
 
 def parseArgs(args):
     return args
@@ -204,6 +206,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-no_adj_mag", action="store_true", help="Don't adjust Emag axis"
     )
+    parser.add_argument("-show", action="store_true", help="Show the figure")
     parser.add_argument("-e", type=str, help="Extra info to put in the legend")
     parser.add_argument("-title", type=str, help="Title of the plot")
 
