@@ -443,4 +443,4 @@ if __name__ == "__main__":
 
     args = parseArgs(parser.parse_args())
 
-    main()
+    main(args)
