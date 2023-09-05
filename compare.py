@@ -84,9 +84,9 @@ def parseArgs(args):
 
     if args.mode == "dir":
         if args.extra is None:
-            args.extras = [None for i in range(len(args.d_list))]
+            args.extra = [None for i in range(len(args.d_list))]
         elif len(args.extra) == 1:
-            args.extras = [args.extra[0] for i in range(len(args.d_list))]
+            args.extra = [args.extra[0] for i in range(len(args.d_list))]
     elif args.mode == "sim":
         numSim = -1
         for key, value in vars(args).items():
