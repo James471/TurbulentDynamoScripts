@@ -87,10 +87,10 @@ def adjustPlotAxis(args, fig, axes, isNewFig, f):
         ylim_ratio = (
             args.ylim_ratio
             if args.ylim_ratio is not None
-            else getNewFigYLim(f[E_KIN_COLUMN_INDEX] / [E_MAG_COLUMN_INDEX])
+            else getNewFigYLim(f[E_MAG_COLUMN_INDEX] / [E_KIN_COLUMN_INDEX])
             if isNewFig
             else getOldFigYLim(
-                f[E_KIN_COLUMN_INDEX] / [E_MAG_COLUMN_INDEX],
+                f[E_MAG_COLUMN_INDEX] / [E_KIN_COLUMN_INDEX],
                 fig,
                 axes[E_RATIO_AXIS_INDEX],
             )
