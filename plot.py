@@ -49,8 +49,8 @@ def addPlotInfo(args, fig, axes, isNewFig):
 
 
 def getNewFigYLim(data):
-    dataMin = np.min(data)
-    dataMax = np.max(data)
+    dataMin = np.min(np.ma.masked_invalid(data))
+    dataMax = np.max(np.ma.masked_invalid(data))
 
     low = max(dataMin, dataMax / LOW_CUT)
     high = dataMax * HIGH_AMPLIFY
@@ -62,8 +62,8 @@ def getOldFigYLim(data, fig, ax):
     oldYLow = ax.get_ylim()[0]
     oldYHigh = ax.get_ylim()[1]
 
-    dataMin = np.min(data)
-    dataMax = np.max(data)
+    dataMin = np.min(np.ma.masked_invalid(data))
+    dataMax = np.max(np.ma.masked_invalid(data))
 
     high = max(oldYHigh, dataMax * HIGH_AMPLIFY)
     low = max(oldYLow, dataMin)
@@ -76,27 +76,25 @@ def adjustPlotAxis(args, fig, axes, isNewFig, f):
         ylim_mag = (
             args.ylim_mag
             if args.ylim_mag is not None
-            else getNewFigYLim(f[E_MAG_COLUMN_INDEX])
+            else getNewFigYLim(getEMag(f))
             if isNewFig
-            else getOldFigYLim(f[E_MAG_COLUMN_INDEX], fig, axes[E_MAG_AXIS_INDEX])
+            else getOldFigYLim(getEMag(f), fig, axes[E_MAG_AXIS_INDEX])
         )
-        print(f"Setting ylim_mag to {ylim_mag}")
         axes[E_MAG_AXIS_INDEX].set_ylim(ylim_mag[0], ylim_mag[1])
+        print("Adjusted E_mag y-limits.")
+    print(f"Set ylim_mag to {axes[E_MAG_AXIS_INDEX].get_ylim()}")
 
     if not args.no_adj_ratio:
         ylim_ratio = (
             args.ylim_ratio
             if args.ylim_ratio is not None
-            else getNewFigYLim(f[E_MAG_COLUMN_INDEX] / [E_KIN_COLUMN_INDEX])
+            else getNewFigYLim(getEMagOverEKin(f))
             if isNewFig
-            else getOldFigYLim(
-                f[E_MAG_COLUMN_INDEX] / [E_KIN_COLUMN_INDEX],
-                fig,
-                axes[E_RATIO_AXIS_INDEX],
-            )
+            else getOldFigYLim(getEMagOverEKin(f), fig, axes[E_RATIO_AXIS_INDEX])
         )
-        print(f"Setting ylim_ratio to {ylim_ratio}")
         axes[E_RATIO_AXIS_INDEX].set_ylim(ylim_ratio[0], ylim_ratio[1])
+        print("Adjusted E_ratio y-limits.")
+    print(f"Set ylim_ratio to {axes[E_RATIO_AXIS_INDEX].get_ylim()}")
 
 
 def getTurnOverTime(args):
@@ -104,6 +102,27 @@ def getTurnOverTime(args):
     if infoDict == None:
         return args.t
     return infoDict["turnover_time"]
+
+
+def getNonDimensionalTime(f, args):
+    turnOverTime = getTurnOverTime(args)
+    return f[TIME_COLUMN_INDEX] / turnOverTime
+
+
+def getEMag(f):
+    return f[E_MAG_COLUMN_INDEX]
+
+
+def getEKin(f):
+    return f[E_KIN_COLUMN_INDEX]
+
+
+def getVRMS(f):
+    return f[V_RMS_COLUMN_INDEX]
+
+
+def getEMagOverEKin(f):
+    return f[E_MAG_COLUMN_INDEX] / f[E_KIN_COLUMN_INDEX]
 
 
 def addPlot(args, fig, axes, isNewFig):
@@ -131,23 +150,22 @@ def addPlot(args, fig, axes, isNewFig):
     else:
         print("Reusing old labels")
 
-    turnOverTime = getTurnOverTime(args)
 
     ax_emag.plot(
-        f[TIME_COLUMN_INDEX] / turnOverTime,
-        f[E_MAG_COLUMN_INDEX],
+        getNonDimensionalTime(f, args),
+        getEMag(f),
         label=getPlotLabel(args),
     )
     ax_emag.legend()
     ax_ratio.plot(
-        f[TIME_COLUMN_INDEX] / turnOverTime,
-        f[E_MAG_COLUMN_INDEX] / f[E_KIN_COLUMN_INDEX],
+        getNonDimensionalTime(f, args),
+        getEMagOverEKin(f),
         label=getPlotLabel(args),
     )
     ax_ratio.legend()
     ax_vrms.plot(
-        f[TIME_COLUMN_INDEX] / turnOverTime,
-        f[V_RMS_COLUMN_INDEX],
+        getNonDimensionalTime(f, args),
+        getVRMS(f),
         label=getPlotLabel(args),
     )
     ax_vrms.legend()
@@ -171,6 +189,7 @@ def parseArgs(args):
 
 
 def main(args, fig=None, axes=None):
+    print("Input directory=", args.i)
     isNewFig = False
 
     if fig == None:
