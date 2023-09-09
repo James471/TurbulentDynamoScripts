@@ -15,6 +15,9 @@ E_KIN_COLUMN_INDEX = 9
 V_RMS_COLUMN_INDEX = 13
 TIME_COLUMN_INDEX = 0
 
+LOW_CUT = 10**10
+HIGH_AMPLIFY = 10
+
 
 def getInfoDict(args):
     if os.path.exists(args.i + "/info.pkl"):
@@ -49,8 +52,8 @@ def getNewFigYLim(data):
     dataMin = np.min(data)
     dataMax = np.max(data)
 
-    low = max(dataMin, dataMax / (10**10))
-    high = dataMax * 10
+    low = max(dataMin, dataMax / LOW_CUT)
+    high = dataMax * HIGH_AMPLIFY
 
     return (low, high)
 
@@ -62,7 +65,7 @@ def getOldFigYLim(data, fig, ax):
     dataMin = np.min(data)
     dataMax = np.max(data)
 
-    high = max(oldYHigh, dataMax * 10)
+    high = max(oldYHigh, dataMax * HIGH_AMPLIFY)
     low = max(oldYLow, dataMin)
 
     return (low, high)
