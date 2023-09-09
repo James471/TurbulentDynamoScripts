@@ -138,7 +138,7 @@ def addPlot(args, fig, axes, isNewFig):
     ax_emag.legend()
     ax_ratio.plot(
         f[TIME_COLUMN_INDEX] / turnOverTime,
-        f[E_KIN_COLUMN_INDEX] / f[E_MAG_COLUMN_INDEX],
+        f[E_MAG_COLUMN_INDEX] / f[E_KIN_COLUMN_INDEX],
         label=getPlotLabel(args),
     )
     ax_ratio.legend()

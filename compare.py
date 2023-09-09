@@ -20,13 +20,16 @@ def createComparisionPlot(dirs, extraArgs, title, outdir, ylim_mag=None,
     for i in range(len(dirs)):
         if i == 0:
             save, fig, axes = False, None, None
+            show_local = False
         elif i == len(dirs) - 1:
             save = True
+            show_local = show
         else:
             save = False
+            show_local = False
 
         fig, axes = plot.main(getArgsForDirPlot(dirs[i], save, extraArgs[i], title, outdir, 
-                                                ylim_mag, ylim_ratio, no_adj_mag, no_adj_ratio, show), fig, axes)
+                                                ylim_mag, ylim_ratio, no_adj_mag, no_adj_ratio, show_local), fig, axes)
 
 
 def createSim(simArgs):
