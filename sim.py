@@ -26,8 +26,12 @@ def getFlashParSolverParams(args):
         RiemannSolver = "Roe"
         """
     elif args.solver == "HLLC":
-        return """
+        return f"""
         RiemannSolver = "HLLC"
+        """
+    elif args.solver == "HLLD":
+        return f"""
+        RiemannSolver = "HLLD"
         """
 
 
@@ -393,7 +397,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-solver",
         default="bk-usm",
-        choices=["HLLC", "Roe", "bk-usm", "bouchut-split"],
+        choices=["HLLC", "Roe", "bk-usm", "bouchut-split", "HLLD"],
         type=str,
         help="Solver to use",
     )
