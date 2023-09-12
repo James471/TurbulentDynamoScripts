@@ -5,6 +5,8 @@ def argsToOutdirName(args):
         + str(args.v)
         + "_auto-adj"
         + str(args.auto_adjust)
+        + "_sol-wt"
+        + str(args.sol_weight)
         + "_solver-"
         + str(args.solver)
         + "_mcut-"
