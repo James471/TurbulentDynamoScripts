@@ -58,7 +58,7 @@ def main(args):
                                     args.outdir, args.sol_weight[i], args.cfl[i], args.E_upwind[i], 
                                     args.nt, args.dt, args.iprocs[i], args.jprocs[i], args.kprocs[i], 
                                     args.nxb[i], args.nyb[i], args.nzb[i], args.flash_path, args.extra[i])
-            dirList.append(args.outdir + "/" + common.argsToOutdirName(simArgs))
+            dirList.append(common.argsToOutdirName(simArgs))
             createSim(simArgs)
     
     createComparisionPlot(dirList, args.extra, args.title, args.outdir, 
