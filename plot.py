@@ -248,7 +248,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("-i", required=True, type=str, help="Input directory")
     parser.add_argument("-outdir", type=str, help="Output directory")
-    parser.add_argument("-t", type=float, deafult=1, help="1 turn over time")
+    parser.add_argument("-t", type=float, default=1, help="1 turn over time")
     parser.add_argument("-save", action="store_true", help="Save the figure")
     parser.add_argument(
         "-ylim_mag", type=float, nargs=2, help="Y-axis limits for E_mag plot"
