@@ -417,7 +417,8 @@ if __name__ == "__main__":
         help="1.0: solenoidal driving, 0.0: compressive driving, 0.5: natural mixture",
     )
     parser.add_argument("-cfl", default=0.5, type=float, help="CFL number")
-    parser.add_argument("-E_method", default="GS", type=str, choices=["Lee", "BalSp", "LeeUpwind", "GS"], help="Method for calculating the electric field")
+    parser.add_argument("-E_method", default="GS", type=str, choices=["Lee", "BalSp", "LeeUpwind", "GS"], 
+                        help="Method for calculating the electric field")
     parser.add_argument("-nt", default=100, type=float, help="Number of turnover times")
     parser.add_argument(
         "-dt",

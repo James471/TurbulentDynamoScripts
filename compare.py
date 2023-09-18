@@ -16,7 +16,8 @@ def getArgsForDirPlot(dir, save, extra, title, outdir, ylim_mag,
 
 
 def createComparisionPlot(dirs, extraArgs, title, outdir, ylim_mag=None, 
-                          ylim_ratio=None, no_adj_mag=False, no_adj_ratio=False, show=False, fit=False, fit_range=None, skiprows=0):
+                          ylim_ratio=None, no_adj_mag=False, no_adj_ratio=False, show=False, 
+                          fit=False, fit_range=None, skiprows=0):
     
     for i in range(len(dirs)):
         if i == 0:

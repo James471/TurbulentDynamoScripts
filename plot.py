@@ -202,7 +202,9 @@ def addFit(args, fig, axes):
     f = getTransient(args)
     ax_ratio = axes[E_RATIO_AXIS_INDEX]
     alpha, alphaErr = getFitParams(args, f)
-    ax_ratio.plot(getNonDimensionalTime(f, args), model(getNonDimensionalTime(f, args), alpha, getEMagOverEKin(f)[0], getNonDimensionalTime(f, args)[0]), label=getFitLabel(args, alpha))
+    ax_ratio.plot(getNonDimensionalTime(f, args), 
+                  model(getNonDimensionalTime(f, args), alpha, getEMagOverEKin(f)[0], 
+                        getNonDimensionalTime(f, args)[0]), label=getFitLabel(args, alpha))
     ax_ratio.legend()
 
 def savePlot(args, fig):
