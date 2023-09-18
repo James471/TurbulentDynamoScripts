@@ -36,11 +36,18 @@ def getFlashParSolverParams(args):
 
 
 def getFlashParMiscParams(args):
-    def getEUpwind(args):
-        return ".true." if args.E_upwind else ".false."
+    def getEMethod(args):
+      if args.E_method == "Lee":
+        return "Lee"
+      elif args.E_method == "LeeUpwind":
+        return "LeeUpwind"
+      elif args.E_method == "BalSp":
+        return "BalsaraSpicer"
+      elif args.E_method == "GS":
+        return "GardinerStone"
 
     return f"""
-    E_upwind = {getEUpwind(args)}
+    E_method = {getEMethod(args)}
     """
 
 
@@ -96,7 +103,7 @@ def createInfoDumpFile(args):
     if args.solver == "bk-usm":
         infoDict["mcut"] = args.mcut
     infoDict["cfl"] = args.cfl
-    infoDict["E_upwind"] = args.E_upwind
+    infoDict["E_method"] = args.E_method
     infoDict["nt"] = args.nt
     infoDict["dt"] = args.dt
     infoDict["grid"] = "uniform"
@@ -410,7 +417,7 @@ if __name__ == "__main__":
         help="1.0: solenoidal driving, 0.0: compressive driving, 0.5: natural mixture",
     )
     parser.add_argument("-cfl", default=0.5, type=float, help="CFL number")
-    parser.add_argument("-E_upwind", default=True, type=bool, help="Use E_upwind")
+    parser.add_argument("-E_method", default="GS", type=str, choices=["Lee", "BalSp", "LeeUpwind", "GS"], help="Method for calculating the electric field")
     parser.add_argument("-nt", default=100, type=float, help="Number of turnover times")
     parser.add_argument(
         "-dt",

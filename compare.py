@@ -6,16 +6,17 @@ import common
 
 
 def getArgsForDirPlot(dir, save, extra, title, outdir, ylim_mag, 
-                      ylim_ratio, no_adj_mag, no_adj_ratio, show):
+                      ylim_ratio, no_adj_mag, no_adj_ratio, show, fit, fit_range, skiprows):
     
     Object = lambda **kwargs: type("Object", (), kwargs)
     return Object(i=dir, outdir=outdir, t=1, save=save, ylim_mag=ylim_mag, 
                   ylim_ratio=ylim_ratio, no_adj_mag=no_adj_mag, 
-                  no_adj_ratio=no_adj_ratio, show=show, e=extra, title=title)
+                  no_adj_ratio=no_adj_ratio, show=show, e=extra, title=title,
+                  fit=fit, fit_range=fit_range, skiprows=skiprows)
 
 
 def createComparisionPlot(dirs, extraArgs, title, outdir, ylim_mag=None, 
-                          ylim_ratio=None, no_adj_mag=False, no_adj_ratio=False, show=False):
+                          ylim_ratio=None, no_adj_mag=False, no_adj_ratio=False, show=False, fit=False, fit_range=None, skiprows=0):
     
     for i in range(len(dirs)):
         if i == 0:
@@ -29,7 +30,8 @@ def createComparisionPlot(dirs, extraArgs, title, outdir, ylim_mag=None,
             show_local = False
 
         fig, axes = plot.main(getArgsForDirPlot(dirs[i], save, extraArgs[i], title, outdir, 
-                                                ylim_mag, ylim_ratio, no_adj_mag, no_adj_ratio, show_local), fig, axes)
+                                                ylim_mag, ylim_ratio, no_adj_mag, no_adj_ratio, show_local,
+                                                fit, fit_range, skiprows), fig, axes)
 
 
 def createSim(simArgs):
@@ -37,11 +39,11 @@ def createSim(simArgs):
 
 
 def getArgsForSim(v, auto_adjust, solver, mcut, outdir, sol_weight, 
-                  cfl, E_upwind, nt, dt, iprocs, jprocs, kprocs, nxb, nyb, nzb, flash_path, extra):
+                  cfl, E_method, nt, dt, iprocs, jprocs, kprocs, nxb, nyb, nzb, flash_path, extra):
     
     Object = lambda **kwargs: type("Object", (), kwargs)
     return Object(v=v, auto_adjust=auto_adjust, solver=solver, mcut=mcut, outdir=outdir, 
-                  sol_weight=sol_weight, cfl=cfl, E_upwind=E_upwind, nt=nt, dt=dt, 
+                  sol_weight=sol_weight, cfl=cfl, E_method=E_method, nt=nt, dt=dt, 
                   iprocs=iprocs, jprocs=jprocs, kprocs=kprocs, nxb=nxb, nyb=nyb, nzb=nzb, 
                   flash_path=flash_path, extra=extra)
 
@@ -55,14 +57,15 @@ def main(args):
         dirList = []
         for i in range(numSim):
             simArgs = getArgsForSim(args.v[i], args.auto_adjust[i], args.solver[i], args.mcut[i], 
-                                    args.outdir, args.sol_weight[i], args.cfl[i], args.E_upwind[i], 
+                                    args.outdir, args.sol_weight[i], args.cfl[i], args.E_method[i], 
                                     args.nt, args.dt, args.iprocs[i], args.jprocs[i], args.kprocs[i], 
                                     args.nxb[i], args.nyb[i], args.nzb[i], args.flash_path, args.extra[i])
             dirList.append(common.argsToOutdirName(simArgs))
             createSim(simArgs)
     
     createComparisionPlot(dirList, args.extra, args.title, args.outdir, 
-                          args.ylim_mag, args.ylim_ratio, args.no_adj_mag, args.no_adj_ratio, args.show)
+                          args.ylim_mag, args.ylim_ratio, args.no_adj_mag, args.no_adj_ratio, args.show,
+                          args.fit, args.fit_range, args.skiprows)
 
 
 def checkArgs(args):
@@ -146,7 +149,7 @@ if __name__ == "__main__":
     )
     simComp.add_argument("-cfl", nargs="*", default=[0.5], type=float, help="CFL")
     simComp.add_argument(
-        "-E_upwind", nargs="*", type=bool, default=[True], help="Use E_upwind"
+        "-E_method", nargs="*", type=str, default=["GS"], help="Method for calculation of electric field"
     )
     simComp.add_argument(
         "-iprocs",
@@ -223,6 +226,9 @@ if __name__ == "__main__":
         "-no_adj_mag", action="store_true", help="Don't adjust Emag axis"
     )
     parser.add_argument("-show", action="store_true", help="Show the figure")
+    parser.add_argument("-fit", action="store_true", help="Fit the data to a power law")
+    parser.add_argument("-fit_range", type=float, nargs=2, help="Range of data to fit")
+    parser.add_argument("-skiprows", type=int, default=0, help="Number of rows to skip in the data file")
 
     args = parseArgs(parser.parse_args())
 

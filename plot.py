@@ -2,6 +2,7 @@
 import matplotlib.pyplot as pl
 import matplotlib.gridspec as gridspec
 import numpy as np
+from scipy.optimize import curve_fit
 import argparse
 import pickle
 import os
@@ -25,6 +26,15 @@ def getInfoDict(args):
             return pickle.load(f)
     return None
 
+def getFitLabel(args, alpha):
+    infoDict = getInfoDict(args)
+    if infoDict == None:
+        return ("Unknown" if args.e is None else args.e)+f", alpha={round(alpha, 2)}"
+    elif infoDict["solver"] == "bk-usm":
+        return f"BK-USM, Cut={infoDict['mcut']}, alpha={round(alpha, 2)}"
+    else:
+        return f"{infoDict['solver']}, alpha={round(alpha, 2)}"
+    
 
 def getPlotLabel(args):
     infoDict = getInfoDict(args)
@@ -106,23 +116,23 @@ def getTurnOverTime(args):
 
 def getNonDimensionalTime(f, args):
     turnOverTime = getTurnOverTime(args)
-    return f[TIME_COLUMN_INDEX] / turnOverTime
+    return (f[TIME_COLUMN_INDEX] / turnOverTime).flatten()
 
 
 def getEMag(f):
-    return f[E_MAG_COLUMN_INDEX]
+    return f[E_MAG_COLUMN_INDEX].flatten()
 
 
 def getEKin(f):
-    return f[E_KIN_COLUMN_INDEX]
+    return f[E_KIN_COLUMN_INDEX].flatten()
 
 
 def getVRMS(f):
-    return f[V_RMS_COLUMN_INDEX]
+    return f[V_RMS_COLUMN_INDEX].flatten()
 
 
 def getEMagOverEKin(f):
-    return f[E_MAG_COLUMN_INDEX] / f[E_KIN_COLUMN_INDEX]
+    return (f[E_MAG_COLUMN_INDEX] / f[E_KIN_COLUMN_INDEX]).flatten()
 
 
 def addPlot(args, fig, axes, isNewFig):
@@ -172,6 +182,28 @@ def addPlot(args, fig, axes, isNewFig):
 
     adjustPlotAxis(args, fig, axes, isNewFig, f)
 
+def model(t, alpha, A, t0):
+    return A*np.exp(alpha*(t-t0))
+
+def getTransient(args):
+    path = args.i + "/Turb.dat"
+    f = np.loadtxt(path, unpack=True, skiprows=args.skiprows)
+    ratio = getEMagOverEKin(f)
+    return f[:, np.where(np.logical_and(ratio > args.fit_range[0], ratio < args.fit_range[1]))]
+
+def getFitParams(args, f):
+    x = getNonDimensionalTime(f, args)
+    y = getEMagOverEKin(f)
+    alphaGuess = np.log(y[-1]/y[0])/(x[-1]-x[0])
+    popt, pcov = curve_fit(lambda t, alpha: model(t, alpha, y[0], x[0]), x, y, p0=[alphaGuess])
+    return popt[0], pcov[0][0]
+
+def addFit(args, fig, axes):
+    f = getTransient(args)
+    ax_ratio = axes[E_RATIO_AXIS_INDEX]
+    alpha, alphaErr = getFitParams(args, f)
+    ax_ratio.plot(getNonDimensionalTime(f, args), model(getNonDimensionalTime(f, args), alpha, getEMagOverEKin(f)[0], getNonDimensionalTime(f, args)[0]), label=getFitLabel(args, alpha))
+    ax_ratio.legend()
 
 def savePlot(args, fig):
     if args.save:
@@ -203,6 +235,8 @@ def main(args, fig=None, axes=None):
         isNewFig = True
 
     addPlot(args, fig, axes, isNewFig)
+    if args.fit:
+        addFit(args, fig, axes)
     savePlot(args, fig)
 
     return fig, axes
@@ -231,6 +265,9 @@ if __name__ == "__main__":
     parser.add_argument("-show", action="store_true", help="Show the figure")
     parser.add_argument("-e", type=str, help="Extra info to put in the legend")
     parser.add_argument("-title", type=str, help="Title of the plot")
+    parser.add_argument("-fit", action="store_true", help="Fit the data to a power law")
+    parser.add_argument("-fit_range", type=float, nargs=2, help="Range of data to fit")
+    parser.add_argument("-skiprows", type=int, default=0, help="Number of rows to skip in the data file")
 
     args = parseArgs(parser.parse_args())
     main(args)

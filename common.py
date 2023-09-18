@@ -9,6 +9,8 @@ def argsToOutdirName(args):
         + str(args.sol_weight)
         + "_solver-"
         + str(args.solver)
+        + "_emd-"
+        + str(args.E_method)
         + "_mcut-"
         + str(args.mcut)
         + "_cfl-"
