@@ -412,7 +412,7 @@ if __name__ == "__main__":
     parser.add_argument("-outdir", default=".", type=str, help="Output directory")
     parser.add_argument(
         "-sol_weight",
-        default=0.5,
+        default=1.0,
         type=str,
         help="1.0: solenoidal driving, 0.0: compressive driving, 0.5: natural mixture",
     )
