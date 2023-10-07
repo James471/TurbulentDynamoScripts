@@ -144,7 +144,7 @@ if __name__ == "__main__":
     simComp.add_argument("-mcut", nargs="*", default=[0.1], type=float, help="Mass cut")
     simComp.add_argument(
         "-sol_weight",
-        nargs = "*",
+        nargs="*",
         default=[1.0],
         type=str,
         help="1.0: solenoidal driving, 0.0: compressive driving, 0.5: natural mixture",
