@@ -5,6 +5,14 @@ def argsToOutdirName(args):
         + str(args.v)
         + "_auto-adj"
         + str(args.auto_adjust)
+        + "_visc-"
+        + str(args.useVisc)
+        + "_Re-"
+        + str(args.Re)
+        + "_mgRes-"
+        + str(args.useMgRes)
+        + "_Prm-"
+        + str(args.Prm)
         + "_sol-wt"
         + str(args.sol_weight)
         + "_solver-"

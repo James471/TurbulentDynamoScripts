@@ -39,11 +39,12 @@ def createSim(simArgs):
     sim.main(simArgs)
 
 
-def getArgsForSim(v, auto_adjust, solver, mcut, outdir, sol_weight, 
+def getArgsForSim(v, auto_adjust, useVisc, Re, useMgRes, Prm, L, c, solver, mcut, outdir, sol_weight, 
                   cfl, E_method, nt, dt, iprocs, jprocs, kprocs, nxb, nyb, nzb, flash_path, extra):
     
     Object = lambda **kwargs: type("Object", (), kwargs)
-    return Object(v=v, auto_adjust=auto_adjust, solver=solver, mcut=mcut, outdir=outdir, 
+    return Object(v=v, auto_adjust=auto_adjust, useVisc=useVisc, Re=Re, useMgRes=useMgRes,
+                  Prm=Prm, L=L, c=c, solver=solver, mcut=mcut, outdir=outdir, 
                   sol_weight=sol_weight, cfl=cfl, E_method=E_method, nt=nt, dt=dt, 
                   iprocs=iprocs, jprocs=jprocs, kprocs=kprocs, nxb=nxb, nyb=nyb, nzb=nzb, 
                   flash_path=flash_path, extra=extra)
@@ -57,7 +58,9 @@ def main(args):
         numSim = len(args.v)
         dirList = []
         for i in range(numSim):
-            simArgs = getArgsForSim(args.v[i], args.auto_adjust[i], args.solver[i], args.mcut[i], 
+            simArgs = getArgsForSim(args.v[i], args.auto_adjust[i], args.useVisc[i], args.Re[i], 
+                                    args.useMgRes[i], args.Prm[i], args.L[i], args.c[i], 
+                                    args.solver[i], args.mcut[i], 
                                     args.outdir, args.sol_weight[i], args.cfl[i], args.E_method[i], 
                                     args.nt, args.dt, args.iprocs[i], args.jprocs[i], args.kprocs[i], 
                                     args.nxb[i], args.nyb[i], args.nzb[i], args.flash_path, args.extra[i])
@@ -110,7 +113,7 @@ def parseArgs(args):
 
     return args
 
-commonKeys = ["mode", "outdir", "title", "flash_path", "nt", "dt", "show", "ylim_mag", "ylim_ratio", "no_adj_mag", "no_adj_ratio"]
+commonKeys = ["mode", "outdir", "title", "flash_path", "nt", "dt", "show", "ylim_mag", "ylim_ratio", "no_adj_mag", "no_adj_ratio", "fit", "fit_range", "skiprows"]
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -133,6 +136,12 @@ if __name__ == "__main__":
         type=int,
         help="Automatically adjust the velocity amplitude",
     )
+    simComp.add_argument("-useVisc", nargs="*", default=["false"], type=str, help="Use viscosity")
+    simComp.add_argument("-Re", nargs="*", default=[1e3], type=float, help="Reynolds number")
+    simComp.add_argument("-useMgRes", nargs="*", default=["false"], type=str, help="Use magnetic resistivity")
+    simComp.add_argument("-Prm", nargs="*", default=[1], type=float, help="Prandtl number")
+    simComp.add_argument("-L", nargs="*", default=[1], type=float, help="Length of the box")
+    simComp.add_argument("-c", nargs="*", default=[1], type=float, help="Speed of sound")
     simComp.add_argument(
         "-solver",
         nargs="*",

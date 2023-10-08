@@ -14,6 +14,14 @@ def argsToSolverSetupParams(args):
         solverSetupParams += "+bouchut"
     return solverSetupParams
 
+def argsToOtherSetupParams(args):
+    otherParams = ""
+    if args.useVisc == "true":
+        otherParams += " +viscosity"
+    if args.useMgRes == "true":
+        otherParams += " +resistivity"
+    return otherParams
+
 
 def getFlashParSolverParams(args):
     if args.solver == "bk-usm":
@@ -73,6 +81,7 @@ def createOutputDirectory(args):
 
 def createSimulationObjectDirectory(args):
     solverSetupParams = argsToSolverSetupParams(args)
+    otherParams = argsToOtherSetupParams(args)
     objDirectory = common.argsToSimulationObjectDirectory(args)
 
     createSimulationCmd = (
@@ -87,6 +96,7 @@ def createSimulationObjectDirectory(args):
         + str(args.nzb)
         + " +ug "
         + solverSetupParams
+        + otherParams
         + " +stir_ics +polytropic_eos -parfile=flash.par.james"
     )
     os.system(createSimulationCmd)
@@ -99,6 +109,10 @@ def createInfoDumpFile(args):
     infoDict["dimensions"] = "3d"
     infoDict["v"] = args.v
     infoDict["auto_adjust"] = args.auto_adjust
+    infoDict["useVisc"] = args.useVisc
+    infoDict["Re"] = args.Re
+    infoDict["useMgRes"] = args.useMgRes
+    infoDict["Prm"] = args.Prm
     infoDict["solver"] = args.solver
     if args.solver == "bk-usm":
         infoDict["mcut"] = args.mcut
@@ -133,12 +147,12 @@ def createFlashPar(args):
     {getFlashParSolverParams(args)}
     {getFlashParMiscParams(args)}
     # kinematic viscosity and magnetic resistivity
-    useViscosity                 = .false.
+    useViscosity                 = .{args.useVisc}.
     visc_whichCoefficientIsConst = 2 # then set diff_visc_nu
-    diff_visc_nu                 = 1e-3 # L*Mach*cs/(2*Re) implies Re=1000
+    diff_visc_nu                 = {args.L*(args.v/args.c)*args.c/(2*args.Re)} # L*Mach*cs/(2*Re) implies Re=1000
 
-    useMagneticResistivity       = .false.
-    resistivity                  = 1e-3
+    useMagneticResistivity       = .{args.useMgRes}.
+    resistivity                  = {args.L*(args.v/args.c)*args.c/(2*args.Re*args.Prm)}
 
     useConductivity              = .false.
     useSTS                       = .false.
@@ -154,7 +168,7 @@ def createFlashPar(args):
     useStir              =  .true.
     st_infilename        =  "TurbGen.par"
     rho_ambient          =  1.0
-    c_ambient            =  1.0
+    c_ambient            =  {args.c}
     magnetic             =  .true.
     MagField_z           =  1e-10
     st_computeDt         =  .false.
@@ -312,7 +326,7 @@ def createTurbGenPar(args):
     # ********************************************************************************
     ndim               = 3              # N-dimensional turbulence driving (1 or 2 or 3).
                                         # Note that ndim = 1.5 or 2.5 will create 2 or 3 vector field components, respectively.
-    L                  = 1.0            # Length of simulation domain (box) in [x[y[z]] (can be comma-separated list to set each component).
+    L                  = {args.L}            # Length of simulation domain (box) in [x[y[z]] (can be comma-separated list to set each component).
     velocity           = {args.v}            # Target turbulent velocity dispersion.
                                         # The following parameters (ampl_factor) is used to adjust the driving amplitude in [x[y[z]],
                                         # to approach the desired target velocity dispersion. Note that it scales as velocity/velocity_measured,
@@ -401,6 +415,12 @@ if __name__ == "__main__":
         type=int,
         help="Automatically adjust the velocity amplitude",
     )
+    parser.add_argument("-useVisc", default="false", type=str, help="Use viscosity")
+    parser.add_argument("-Re", default=1000, type=float, help="Reynolds number")
+    parser.add_argument("-useMgRes", default="false", type=str, help="Use magnetic resistivity")
+    parser.add_argument("-Prm", default=1, type=float, help="Magnetic prandtl number")
+    parser.add_argument("-L", default=1.0, type=float, help="Length of simulation domain")
+    parser.add_argument("-c", default=1.0, type=float, help="Speed of sound")
     parser.add_argument(
         "-solver",
         default="bk-usm",
