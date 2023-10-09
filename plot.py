@@ -38,12 +38,14 @@ def getFitLabel(args, alpha):
 
 def getPlotLabel(args):
     infoDict = getInfoDict(args)
+    plotLabel = "" if args.e is None else args.e
     if infoDict == None:
-        return "Unknown" if args.e is None else args.e
+        plotLabel += " Unknown" if args.e is None else args.e
     elif infoDict["solver"] == "bk-usm":
-        return f"BK-USM, Cut={infoDict['mcut']}"
+        plotLabel += f" BK-USM, Cut={infoDict['mcut']}"
     else:
-        return f"{infoDict['solver']}"
+        plotLabel += f" {infoDict['solver']}"
+    return plotLabel
 
 
 def addPlotInfo(args, fig, axes, isNewFig):
