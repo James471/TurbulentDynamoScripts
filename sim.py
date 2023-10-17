@@ -117,7 +117,8 @@ def createInfoDumpFile(args):
     if args.solver == "bk-usm":
         infoDict["mcut"] = args.mcut
     infoDict["cfl"] = args.cfl
-    infoDict["E_method"] = args.E_method
+    if args.solver not in ["bouchut-split"]:
+        infoDict["E_method"] = args.E_method
     infoDict["nt"] = args.nt
     infoDict["dt"] = args.dt
     infoDict["grid"] = "uniform"
