@@ -5,16 +5,6 @@ import plot
 import common
 
 
-def getArgsForDirPlot(dir, save, extra, title, outdir, ylim_mag, 
-                      ylim_ratio, no_adj_mag, no_adj_ratio, show, fit, fit_range, skiprows):
-    
-    Object = lambda **kwargs: type("Object", (), kwargs)
-    return Object(i=dir, outdir=outdir, t=1, save=save, ylim_mag=ylim_mag, 
-                  ylim_ratio=ylim_ratio, no_adj_mag=no_adj_mag, 
-                  no_adj_ratio=no_adj_ratio, show=show, e=extra, title=title,
-                  fit=fit, fit_range=fit_range, skiprows=skiprows)
-
-
 def createComparisionPlot(dirs, extraArgs, title, outdir, ylim_mag=None, 
                           ylim_ratio=None, no_adj_mag=False, no_adj_ratio=False, show=False, 
                           fit=False, fit_range=None, skiprows=0):
@@ -30,24 +20,15 @@ def createComparisionPlot(dirs, extraArgs, title, outdir, ylim_mag=None,
             save = False
             show_local = False
 
-        fig, axes = plot.main(getArgsForDirPlot(dirs[i], save, extraArgs[i], title, outdir, 
-                                                ylim_mag, ylim_ratio, no_adj_mag, no_adj_ratio, show_local,
-                                                fit, fit_range, skiprows), fig, axes)
+        fig, axes = plot.main(common.Object(i=dir[i], outdir=outdir, t=1, save=save, ylim_mag=ylim_mag, 
+                                            ylim_ratio=ylim_ratio, no_adj_mag=no_adj_mag, 
+                                            no_adj_ratio=no_adj_ratio, show=show_local, e=extraArgs[i], 
+                                            title=title, fit=fit, fit_range=fit_range, skiprows=skiprows), 
+                              fig=fig, axes=axes)
 
 
 def createSim(simArgs):
     sim.main(simArgs)
-
-
-def getArgsForSim(v, auto_adjust, useVisc, Re, useMgRes, Prm, L, c, solver, mcut, outdir, sol_weight, 
-                  cfl, E_method, nt, dt, iprocs, jprocs, kprocs, nxb, nyb, nzb, flash_path, extra):
-    
-    Object = lambda **kwargs: type("Object", (), kwargs)
-    return Object(v=v, auto_adjust=auto_adjust, useVisc=useVisc, Re=Re, useMgRes=useMgRes,
-                  Prm=Prm, L=L, c=c, solver=solver, mcut=mcut, outdir=outdir, 
-                  sol_weight=sol_weight, cfl=cfl, E_method=E_method, nt=nt, dt=dt, 
-                  iprocs=iprocs, jprocs=jprocs, kprocs=kprocs, nxb=nxb, nyb=nyb, nzb=nzb, 
-                  flash_path=flash_path, extra=extra)
 
 
 def main(args):
@@ -58,12 +39,14 @@ def main(args):
         numSim = len(args.v)
         dirList = []
         for i in range(numSim):
-            simArgs = getArgsForSim(args.v[i], args.auto_adjust[i], args.useVisc[i], args.Re[i], 
-                                    args.useMgRes[i], args.Prm[i], args.L[i], args.c[i], 
-                                    args.solver[i], args.mcut[i], 
-                                    args.outdir, args.sol_weight[i], args.cfl[i], args.E_method[i], 
-                                    args.nt, args.dt, args.iprocs[i], args.jprocs[i], args.kprocs[i], 
-                                    args.nxb[i], args.nyb[i], args.nzb[i], args.flash_path, args.extra[i])
+            simArgs = common.Object(v=args.v[i], auto_adjust=args.auto_adjust[i], useVisc=args.useVisc[i], 
+                                    Re=args.Re[i], useMgRes=args.useMgRes[i], Prm=args.Prm[i], L=args.L[i], 
+                                    c=args.c[i], solver=args.solver[i], mcut=args.mcut[i], 
+                                    outdir=args.outdir, sol_weight=args.sol_weight[i], cfl=args.cfl[i], 
+                                    E_method=args.E_method[i], nt=args.nt, dt=args.dt, iprocs=args.iprocs[i], 
+                                    jprocs=args.jprocs[i], kprocs=args.kprocs[i], nxb=args.nxb[i], 
+                                    nyb=args.nyb[i], nzb=args.nzb[i], flash_path=args.flash_path, 
+                                    extra=args.extra[i])
             dirList.append(common.argsToOutdirName(simArgs))
             createSim(simArgs)
     

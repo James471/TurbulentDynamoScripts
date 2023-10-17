@@ -47,3 +47,6 @@ def argsToOutdirName(args):
 
 def argsToSimulationObjectDirectory(args):
     return argsToOutdirName(args) + "/objStirFromFile"
+
+
+Object = lambda **kwargs: type("Object", (), kwargs)
