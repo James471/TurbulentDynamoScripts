@@ -467,7 +467,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "-flash_path",
-        default="/home/james471/Academics/Projects/MHD/Code/flash-rsaa",
+        default=common.FLASH_PATH,
         help="Path to flash directory",
     )
     parser.add_argument(

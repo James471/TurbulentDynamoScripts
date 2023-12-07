@@ -20,7 +20,7 @@ def createComparisionPlot(dirs, extraArgs, title, outdir, ylim_mag=None,
             save = False
             show_local = False
 
-        fig, axes = plot.main(common.Object(i=dir[i], outdir=outdir, t=1, save=save, ylim_mag=ylim_mag, 
+        fig, axes = plot.main(common.Object(i=dirs[i], outdir=outdir, t=1, save=save, ylim_mag=ylim_mag, 
                                             ylim_ratio=ylim_ratio, no_adj_mag=no_adj_mag, 
                                             no_adj_ratio=no_adj_ratio, show=show_local, e=extraArgs[i], 
                                             title=title, fit=fit, fit_range=fit_range, skiprows=skiprows), 
@@ -200,7 +200,7 @@ if __name__ == "__main__":
     )
     simComp.add_argument(
         "-flash_path",
-        default="/home/james471/Academics/Projects/MHD/Code/flash-rsaa",
+        default=common.FLASH_PATH,
         type=str,
         help="Path to flash directory",
     )

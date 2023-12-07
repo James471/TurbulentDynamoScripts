@@ -1,3 +1,5 @@
+FLASH_PATH = "/home/james471/Academics/Projects/MHD/Code/flash-rsaa"
+
 def argsToOutdirName(args):
     outputDirName = (
         args.outdir
