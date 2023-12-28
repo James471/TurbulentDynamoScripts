@@ -19,6 +19,8 @@ TIME_COLUMN_INDEX = 0
 LOW_CUT = 10**10
 HIGH_AMPLIFY = 10
 
+FIT_COLOR_CYCLE = ["b", "g", "r", "c", "m", "y", "k"]
+
 
 def getInfoDict(args):
     if os.path.exists(args.i + "/info.pkl"):
@@ -28,24 +30,28 @@ def getInfoDict(args):
 
 def getFitLabel(args, alpha):
     infoDict = getInfoDict(args)
-    if infoDict == None:
+    if args.e is not None:
+        return args.e+f", alpha={round(alpha, 2)}"
+    if infoDict is None and args.e is None:
         return ("Unknown" if args.e is None else args.e)+f", alpha={round(alpha, 2)}"
-    elif infoDict["solver"] == "bk-usm":
-        return f"BK-USM, Cut={infoDict['mcut']}, alpha={round(alpha, 2)}"
-    else:
-        return f"{infoDict['solver']}, alpha={round(alpha, 2)}"
+    if infoDict is not None and args.e is None:
+        if infoDict["solver"] == "bk-usm":
+            return f"BK-USM, Cut={infoDict['mcut']}, alpha={round(alpha, 2)}"
+        else:
+            return f"{infoDict['solver']}, alpha={round(alpha, 2)}"
     
 
 def getPlotLabel(args):
     infoDict = getInfoDict(args)
-    plotLabel = "" if args.e is None else args.e
-    if infoDict == None:
-        plotLabel += " Unknown" if args.e is None else args.e
-    elif infoDict["solver"] == "bk-usm":
-        plotLabel += f" BK-USM, Cut={infoDict['mcut']}"
-    else:
-        plotLabel += f" {infoDict['solver']}"
-    return plotLabel
+    if args.e is not None:
+        return args.e
+    if args.e is None and infoDict is None:
+        return "Unknown"
+    if args.e is None and infoDict is not None:
+        if infoDict["solver"] == "bk-usm":
+            return f"BK-USM, Cut={infoDict['mcut']}"
+        else:
+            return infoDict["solver"]
 
 
 def addPlotInfo(args, fig, axes, isNewFig):
@@ -168,17 +174,20 @@ def addPlot(args, fig, axes, isNewFig):
         getEMag(f),
         label=getPlotLabel(args),
     )
+    color = ax_emag.get_lines()[-1].get_color()
     ax_emag.legend()
     ax_ratio.plot(
         getNonDimensionalTime(f, args),
         getEMagOverEKin(f),
         label=getPlotLabel(args),
+        color=color
     )
     ax_ratio.legend()
     ax_vrms.plot(
         getNonDimensionalTime(f, args),
         getVRMS(f),
         label=getPlotLabel(args),
+        color=color
     )
     ax_vrms.legend()
 
@@ -267,7 +276,7 @@ if __name__ == "__main__":
         "-no_adj_mag", action="store_true", help="Don't adjust Emag axis"
     )
     parser.add_argument("-show", action="store_true", help="Show the figure")
-    parser.add_argument("-e", type=str, help="Extra info to put in the legend")
+    parser.add_argument("-e", type=str, help="Info to put in the legend")
     parser.add_argument("-title", type=str, help="Title of the plot")
     parser.add_argument("-fit", action="store_true", help="Fit the data to a power law")
     parser.add_argument("-fit_range", type=float, nargs=2, help="Range of data to fit")
