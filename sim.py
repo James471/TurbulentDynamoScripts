@@ -2,6 +2,7 @@
 import os
 import argparse
 import pickle
+import socket
 import textwrap
 import common
 
@@ -378,7 +379,11 @@ def createFlashSymLink(args):
 def runSimulation(args):
     currentPath = os.getcwd()
     os.chdir(common.argsToOutdirName(args))
-    os.system("mpirun -np " + str(args.iprocs * args.jprocs * args.kprocs) + " flash4")
+    # Hacky
+    if "nid" in socket.gethostname():
+        os.system(f"srun -N {os.environ['SLURM_JOB_NUM_NODES']} -n {os.environ['SLURM_NTASKS']} -c {os.environ['OMP_NUM_THREADS']} flash4")
+    else:
+        os.system("mpirun -np " + str(args.iprocs * args.jprocs) + " flash4")
     os.chdir(currentPath)
 
 
