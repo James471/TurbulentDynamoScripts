@@ -13,6 +13,8 @@ def argsToSolverSetupParams(args):
         solverSetupParams += "+usm"
     elif args.solver == "bouchut-split":
         solverSetupParams += "+bouchut"
+    elif args.solver == "8wave":
+        solverSetupParams = "+8wave"
     return solverSetupParams
 
 def argsToOtherSetupParams(args):
@@ -42,6 +44,8 @@ def getFlashParSolverParams(args):
         return f"""
         RiemannSolver = "HLLD"
         """
+    elif args.solver in ["bouchut-split", "8wave"]:
+        return ""
 
 
 def getFlashParMiscParams(args):
@@ -430,7 +434,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-solver",
         default="bk-usm",
-        choices=["HLLC", "Roe", "bk-usm", "bouchut-split", "HLLD"],
+        choices=["HLLC", "Roe", "bk-usm", "bouchut-split", "HLLD", "8wave"],
         type=str,
         help="Solver to use",
     )

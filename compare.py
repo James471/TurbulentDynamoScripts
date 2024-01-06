@@ -129,7 +129,7 @@ if __name__ == "__main__":
         "-solver",
         nargs="*",
         default=["bk-usm"],
-        choices=["HLLC", "Roe", "bk-usm", "bouchut-split", "HLLD"],
+        choices=["HLLC", "Roe", "bk-usm", "bouchut-split", "HLLD", "8wave"],
         type=str,
         help="Solvers",
     )
