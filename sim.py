@@ -387,7 +387,7 @@ def runSimulation(args):
     if "nid" in socket.gethostname():
         os.system(f"srun -N {os.environ['SLURM_JOB_NUM_NODES']} -n {os.environ['SLURM_NTASKS']} -c {os.environ['OMP_NUM_THREADS']} flash4")
     else:
-        os.system("mpirun -np " + str(args.iprocs * args.jprocs) + " flash4")
+        os.system("mpirun -np " + str(args.iprocs * args.jprocs * args.kprocs) + " flash4")
     os.chdir(currentPath)
 
 
