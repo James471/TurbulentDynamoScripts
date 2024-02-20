@@ -8,6 +8,49 @@ import argparse
 import pickle
 import os
 
+# === set default plotting style ===
+
+from matplotlib import rcParams
+
+# latex
+rcParams['text.usetex'] = True
+rcParams['text.latex.preamble'] = r'\usepackage{bm}'
+# basics
+rcParams['lines.linewidth'] = 1.2
+rcParams['font.family'] = 'Arial'
+rcParams['font.size'] = 15
+rcParams['axes.linewidth'] = 0.8
+# x-ticks
+rcParams['xtick.top'] = True
+rcParams['xtick.direction'] = 'in'
+rcParams['xtick.minor.visible'] = True
+rcParams['xtick.major.size'] = 6
+rcParams['xtick.minor.size'] = 3
+rcParams['xtick.major.width'] = 0.75
+rcParams['xtick.minor.width'] = 0.75
+rcParams['xtick.major.pad'] = 5
+rcParams['xtick.minor.pad'] = 5
+# y-ticks
+rcParams['ytick.right'] = True
+rcParams['ytick.direction'] = 'in'
+rcParams['ytick.minor.visible'] = True
+rcParams['ytick.major.size'] = 6
+rcParams['ytick.minor.size'] = 3
+rcParams['ytick.major.width'] = 0.75
+rcParams['ytick.minor.width'] = 0.75
+rcParams['ytick.major.pad'] = 5
+rcParams['ytick.minor.pad'] = 5
+# legend
+rcParams['legend.fontsize'] = 10
+rcParams['legend.labelspacing'] = 0.2
+rcParams['legend.frameon'] = False
+# figure
+rcParams['figure.figsize'] = (8.0, 5.0)
+rcParams['figure.dpi'] = 150
+rcParams['savefig.dpi'] = 200
+rcParams['savefig.bbox'] = 'tight'
+
+
 E_MAG_COLUMN_INDEX = 11
 E_KIN_COLUMN_INDEX = 9
 V_RMS_COLUMN_INDEX = 13
@@ -106,10 +149,10 @@ def main(args):
     axRatio.set_xlabel(r"$t / t_{\mathrm{turb}}$")
     axRatio.set_ylabel(r"$E_\mathrm{mag}/E_\mathrm{kin}$")
     axMach.set_ylabel(r"$\mathcal{M}$")
-    axRatio.tick_params(axis="x",direction="in")
-    axRatio.tick_params(axis="y",direction="in")
-    axMach.tick_params(axis="x",direction="in")
-    axMach.tick_params(axis="y",direction="in")
+    # axRatio.tick_params(axis="x",direction="in")
+    # axRatio.tick_params(axis="y",direction="in")
+    # axMach.tick_params(axis="x",direction="in")
+    # axMach.tick_params(axis="y",direction="in")
     axRatio.set_aspect('auto')
     axMach.set_aspect('auto')
 
@@ -139,7 +182,7 @@ commonKeys = ["ld"]
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Automate production grade plots")
     parser.add_argument("-i", type=str, nargs="*", help="Input Directories")
-    parser.add_argument("-o", type=str, default="Turb.pdf", help="Output Directory")
+    parser.add_argument("-o", type=str, default="./Turb.pdf", help="Output Directory")
     parser.add_argument("-lf", type=float, nargs="*", help="Lower bound for fit")
     parser.add_argument("-uf", type=float, nargs="*", help="Upper bound for fit")
     parser.add_argument("-sr", type=int, nargs="*", help="Skip rows")
