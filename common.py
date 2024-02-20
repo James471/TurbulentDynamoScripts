@@ -1,4 +1,4 @@
-FLASH_PATH = "/home/james471/Academics/Projects/MHD/Code/flash-rsaa"
+FLASH_PATH = "/home/100/jw5893/flash-rsaa"
 
 def argsToOutdirName(args):
     outputDirName = (
