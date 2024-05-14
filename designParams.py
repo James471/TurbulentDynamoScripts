@@ -31,8 +31,9 @@ rcParams['ytick.minor.width'] = 0.75
 rcParams['ytick.major.pad'] = 5
 rcParams['ytick.minor.pad'] = 5
 # legend
-rcParams['legend.fontsize'] = 10
+rcParams['legend.fontsize'] = rcParams['font.size']
 rcParams['legend.labelspacing'] = 0.2
+rcParams['legend.loc'] = 'upper left'
 rcParams['legend.frameon'] = False
 # figure
 rcParams['figure.figsize'] = (8.0, 5.0)

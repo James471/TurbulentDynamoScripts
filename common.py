@@ -9,12 +9,12 @@ V_RMS_COLUMN_INDEX = 13
 TIME_COLUMN_INDEX = 0
 
 
-solverDict = {"8wave": "Split-Roe", "bouchut-split": "Split-Bouchut", "Roe": "USM-Roe", 
+SOLVER_DICT = {"8wave": "Split-Roe", "bouchut-split": "Split-Bouchut", "Roe": "USM-Roe", 
               "HLLD": "USM-HLLD", "HLLC": "USM-HLLC", "bk-usm": "USM-BK"}
-colorDict = {"8wave": "#377eb8", "HLLD": "#984ea3", "HLLC": "#4daf4a", 
+COLOR_DICT = {"8wave": "#377eb8", "HLLD": "#984ea3", "HLLC": "#4daf4a", 
               "Roe": "#a65628", "bouchut-split": "#f781bf", "bk-usm": "#ff7f00"}
-orderDict = {"8wave": 0, "bouchut-split": 1, "Roe": 2, "HLLD": 3, "HLLC": 4, "bk-usm": 5}
-
+ORDER_DICT = {"8wave": 0, "bouchut-split": 1, "Roe": 2, "HLLD": 3, "HLLC": 4, "bk-usm": 5}
+FACT_DICT = {"bk-usm": 1.0, "Roe": 0.1, "HLLC": 0.01, "HLLD": 0.001, "bouchut-split": 0.0001, "8wave": 0.00001}
 
 def getInfoDict(sim):
     '''
@@ -86,14 +86,15 @@ def parseArgs(args, commonKeys):
     numSim = -1
     for key, value in vars(args).items():
         if key not in commonKeys:
-            if value is not None and len(value) > 1:
+            if value is not None and len(value) >= 1:
                 numSim = len(value)
                 break
-            
+
     for key, value in vars(args).items():
         if key not in commonKeys:
             if value is None:
-                setattr(args, key, [None for i in range(numSim)])
+                setattr(args, key, [None for _ in range(numSim)])
             elif len(value) == 1:
-                setattr(args, key, [value[0] for i in range(numSim)])
+                setattr(args, key, [value[0] for _ in range(numSim)])
+
     return args

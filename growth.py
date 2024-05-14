@@ -8,6 +8,7 @@ import argparse
 import pickle
 import os
 import designParams
+import common
 
 
 E_MAG_COLUMN_INDEX = 11
@@ -64,8 +65,8 @@ def addPlot(fig, axMach, axRatio, f, label, color, low, high, velocity, stf):
     t = getNonDimensionalTime(f, velocity)
     mach = getVRMS(f) / getCsRMS(f)
     ratio = getEMagOverEKin(f)
-    axMach.plot(t, mach, color=color)
-    axRatio.plot(t, ratio, label=label, color=color)
+    axMach.plot(t, mach, color=color, label=label)
+    axRatio.plot(t, ratio, color=color)
     
     fitMask = (t > stf) & (ratio > low) & (ratio < high)
     t_fit = t[fitMask]
@@ -103,7 +104,7 @@ def main(args):
                  "bk-usm": "USM-BK", "HLLC": "USM-HLLC", "HLLD": "USM-HLLD"}
     orderDict = {"8wave": 0, "bouchut-split": 1, "Roe": 2, "HLLD": 3, "HLLC": 4, "bk-usm": 5}
     
-    fig, axes = pl.subplots(nrows=2, sharex=True, gridspec_kw={'hspace': 0.05}, figsize=(8, 8))
+    fig, axes = pl.subplots(nrows=2, sharex=True, gridspec_kw={'hspace': 0.05}, figsize=(10, 10))
     axMach, axRatio = axes
     axRatio.set_xlabel(r"$t / t_{\mathrm{turb}}$")
     axRatio.set_ylabel(r"$E_\mathrm{mag}/E_\mathrm{kin}$")
@@ -117,9 +118,9 @@ def main(args):
 
     axRatio.set_yscale("log")
 
-    order = [0 for i in range(len(args.i))]
+    order = [0 for i in range(len(args.i)) if os.path.isdir(args.i[i])]
 
-    fileList = args.i
+    fileList = [i for i in args.i if os.path.isdir(i)]
     for index, file in enumerate(fileList):
         infoDict = getInfoDict(file)
         velocity = infoDict["v"]
@@ -129,8 +130,8 @@ def main(args):
         order[index] = orderDict[infoDict["solver"]]
     order = np.argsort(order)
     order[1], order[2], order[3], order[4] = order[3], order[1], order[4], order[2]
-    handles, labels = axRatio.get_legend_handles_labels()
-    axRatio.legend([handles[i] for i in order], [labels[i] for i in order], ncol=3)
+    handles, labels = axMach.get_legend_handles_labels()
+    axMach.legend([handles[i] for i in order], [labels[i] for i in order], ncol=3, fontsize=19)
     if args.ld is not None:
         axRatio.set_ylim(bottom=args.ld)
     fig.savefig(args.o)
@@ -144,7 +145,7 @@ if __name__ == "__main__":
     parser.add_argument("-o", type=str, default="./Turb.pdf", help="Output Directory")
     parser.add_argument("-lf", type=float, nargs="*", help="Lower bound for fit")
     parser.add_argument("-uf", type=float, nargs="*", help="Upper bound for fit")
-    parser.add_argument("-sr", type=int, nargs="*", help="Skip rows")
+    parser.add_argument("-sr", type=int, nargs="*", default=[0], help="Skip rows")
     parser.add_argument("-stf", type=float, nargs="*", default=[1.0], help="Skip turnover time before fit")
     parser.add_argument("-ld", type=float, help="Low bound to display")
 
