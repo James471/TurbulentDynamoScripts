@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
+
 import os
 import argparse
 import pickle
 import socket
 import textwrap
-import common
+import utils
+from myconfig import *
 
 
 def argsToSolverSetupParams(args):
@@ -68,7 +70,7 @@ def createOutputDirectory(args):
     if not os.path.exists(args.outdir):
         os.makedirs(args.outdir)
 
-    outputDirName = common.argsToOutdirName(args)
+    outputDirName = utils.argsToOutdirName(args)
 
     if os.path.exists(outputDirName):
         deleteExistingDir = input(
@@ -87,10 +89,10 @@ def createOutputDirectory(args):
 def createSimulationObjectDirectory(args):
     solverSetupParams = argsToSolverSetupParams(args)
     otherParams = argsToOtherSetupParams(args)
-    objDirectory = common.argsToSimulationObjectDirectory(args)
+    objDirectory = utils.argsToSimulationObjectDirectory(args)
 
     createSimulationCmd = (
-        args.flash_path
+        FLASH_PATH
         + "/setup StirFromFile -auto -objdir="
         + objDirectory
         + " -3d -nxb="
@@ -136,7 +138,7 @@ def createInfoDumpFile(args):
     infoDict["extra"] = args.extra
     infoDict["turnover_time"] = 1 / (2 * args.v)
 
-    infoFilePath = common.argsToOutdirName(args) + "/info.pkl"
+    infoFilePath = utils.argsToOutdirName(args) + "/info.pkl"
     with open(infoFilePath, "wb") as infoFile:
         pickle.dump(infoDict, infoFile)
 
@@ -147,7 +149,7 @@ def createFlashPar(args):
     checkpointFileIntervalTime = turnOverTime
     plotFileIntervalTime = args.dt * turnOverTime
 
-    flashParFile = open(common.argsToOutdirName(args) + "/flash.par", "w")
+    flashParFile = open(utils.argsToOutdirName(args) + "/flash.par", "w")
 
     flashParFileContent = f"""
     {getFlashParSolverParams(args)}
@@ -323,7 +325,7 @@ def createFlashPar(args):
 
 
 def createTurbGenPar(args):
-    turbGenParFile = open(common.argsToOutdirName(args) + "/TurbGen.par", "w")
+    turbGenParFile = open(utils.argsToOutdirName(args) + "/TurbGen.par", "w")
 
     turbGenParFileContent = f"""
     # ********************************************************************************
@@ -367,7 +369,7 @@ def createTurbGenPar(args):
 
 def createFlashExec(args):
     currentPath = os.getcwd()
-    os.chdir(common.argsToSimulationObjectDirectory(args))
+    os.chdir(utils.argsToSimulationObjectDirectory(args))
     os.system("make -j 20")
     os.chdir(currentPath)
 
@@ -376,13 +378,13 @@ def createFlashSymLink(args):
     # If the target of a symbolic link is a relative path, it's interpreted relative to the
     # directory containing the link, not the directory you were in when you created it.
     os.system(
-        "ln -sv objStirFromFile/flash4 " + common.argsToOutdirName(args) + "/flash4"
+        "ln -sv objStirFromFile/flash4 " + utils.argsToOutdirName(args) + "/flash4"
     )
 
 
 def runSimulation(args):
     currentPath = os.getcwd()
-    os.chdir(common.argsToOutdirName(args))
+    os.chdir(utils.argsToOutdirName(args))
     # Hacky
     if "nid" in socket.gethostname():
         os.system(f"srun -N {os.environ['SLURM_JOB_NUM_NODES']} -n {os.environ['SLURM_NTASKS']} -c {os.environ['OMP_NUM_THREADS']} flash4")
@@ -418,7 +420,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Run a simulation of a turbulent dynamo."
     )
-    parser.add_argument("-v", default=1.0, type=float, help="Velocity amplitude")
+    parser.add_argument("-v", default=0.1, type=float, help="Velocity amplitude")
     parser.add_argument(
         "-auto_adjust",
         default=0,
@@ -439,7 +441,7 @@ if __name__ == "__main__":
         help="Solver to use",
     )
     parser.add_argument("-mcut", default=0.1, type=float, help="Low mach cutoff")
-    parser.add_argument("-outdir", default=".", type=str, help="Output directory")
+    parser.add_argument("-outdir", default="./", type=str, help="Output directory")
     parser.add_argument(
         "-sol_weight",
         default=1.0,
@@ -447,7 +449,7 @@ if __name__ == "__main__":
         help="1.0: solenoidal driving, 0.0: compressive driving, 0.5: natural mixture",
     )
     parser.add_argument("-cfl", default=0.5, type=float, help="CFL number")
-    parser.add_argument("-E_method", default="GS", type=str, choices=["Lee", "BalSp", "LeeUpwind", "GS"], 
+    parser.add_argument("-E_method", default="LeeUpwind", type=str, choices=["Lee", "BalSp", "LeeUpwind", "GS"], 
                         help="Method for calculating the electric field")
     parser.add_argument("-nt", default=100, type=float, help="Number of turnover times")
     parser.add_argument(
@@ -475,12 +477,7 @@ if __name__ == "__main__":
         "-nzb", default=32, type=int, help="Number of blocks in k-direction"
     )
     parser.add_argument(
-        "-flash_path",
-        default=common.FLASH_PATH,
-        help="Path to flash directory",
-    )
-    parser.add_argument(
-        "-extra", type=str, help="Extra arguments to pass to the simulation"
+        "-extra", type=str, help="Extra arguments to pass to the simulation. This gets stored in info.pkl and goes into the directory name."
     )
 
     args = parseArgs(parser.parse_args())

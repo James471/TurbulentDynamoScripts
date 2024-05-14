@@ -1,67 +1,25 @@
 #!/usr/bin/env python3
-
-import matplotlib.pyplot as pl
-import matplotlib.gridspec as gridspec
-import numpy as np
-from scipy.optimize import curve_fit
+import sys
 import argparse
-import pickle
-import os
+import numpy as np
+import matplotlib.pyplot as pl
+from scipy.optimize import curve_fit
+
+from constants import *
+from datautils import *
+from utils import *
+from myconfig import *
 import designParams
-import common
 
-
-E_MAG_COLUMN_INDEX = 11
-E_KIN_COLUMN_INDEX = 9
-V_RMS_COLUMN_INDEX = 13
-Cs_RMS_COLUMN_INDEX = 14
-TIME_COLUMN_INDEX = 0
-
-def getTurnOverTime(v):
-    return 1/(2*v)
-
-
-def getNonDimensionalTime(f, v):
-    turnOverTime = getTurnOverTime(v)
-    return (f[TIME_COLUMN_INDEX] / turnOverTime).flatten()
-
-
-def getEMag(f):
-    return f[E_MAG_COLUMN_INDEX].flatten()
-
-
-def getEKin(f):
-    return f[E_KIN_COLUMN_INDEX].flatten()
-
-
-def getVRMS(f):
-    return f[V_RMS_COLUMN_INDEX].flatten()
-
-
-def getCsRMS(f):
-    return f[Cs_RMS_COLUMN_INDEX].flatten()
-
-
-def getEMagOverEKin(f):
-    return (getEMag(f) / getEKin(f)).flatten()
-
-
-def loadFile(path, shift):
-    return np.loadtxt(path, unpack=True, skiprows=shift)
-
-
-def getInfoDict(dirPath):
-    # if os.path.exists(args.i + "/info.pkl"):
-    with open(dirPath + "/info.pkl", "rb") as f:
-        return pickle.load(f)
-    # return None
+sys.path.append(PYTHON_PATH)
+import cfp
 
 
 def model(t, alpha, lnA, t0):
     return lnA + alpha * (t - t0)
 
 
-def addPlot(fig, axMach, axRatio, f, label, color, low, high, velocity, stf):
+def addPlot(axMach, axRatio, f, label, color, low, high, velocity, stf, fitMethod):
     t = getNonDimensionalTime(f, velocity)
     mach = getVRMS(f) / getCsRMS(f)
     ratio = getEMagOverEKin(f)
@@ -73,83 +31,83 @@ def addPlot(fig, axMach, axRatio, f, label, color, low, high, velocity, stf):
     ratio_fit = ratio[fitMask]
     alphaGuess = np.log(ratio_fit[-1]/ratio_fit[0])/(t_fit[-1]-t_fit[0])
     lnAGuess = np.log(ratio_fit[0])
+    guessParam = {"alpha": alphaGuess, "lnA": lnAGuess}
 
-    popt, pcov = curve_fit(lambda t, alpha, lnA: model(t, alpha, lnA, t_fit[0]), t_fit, np.log(ratio_fit), p0=[alphaGuess, lnAGuess])
-    print(f"Label:{label}, popt:{popt[0], np.exp(popt[1])}, err:{np.sqrt(pcov[0][0])}, {np.exp(popt[1]) * np.sqrt(pcov[1][1])}")
-    axRatio.plot(t_fit, np.exp(model(t_fit, *(list(popt)+[t_fit[0]]))), color="black")
+    fit = {}
 
+    if fitMethod == "scp":
+        popt, pcov = curve_fit(lambda t, alpha, lnA: model(t, alpha, lnA, t_fit[0]), t_fit, np.log(ratio_fit), p0=[alphaGuess, lnAGuess])
+        fit["alpha"] = (popt[0], -np.sqrt(pcov[0][0]), np.sqrt(pcov[0][0]))
+        fit["lnA"] = (popt[1], -np.sqrt(pcov[1][1]), np.sqrt(pcov[1][1]))
+    elif fitMethod == "asym":
+        temp = cfp.fit(lambda t, alpha, lnA: model(t, alpha, lnA, t_fit[0]), t_fit, np.log(ratio_fit), params=guessParam)
+        fit["alpha"] = (temp.popt[0], temp.perr[0][0], temp.perr[0][1])
+        fit["lnA"] = (temp.popt[1], temp.perr[1][0], temp.perr[1][1])
+    elif fitMethod == "syst":
+        temp = cfp.fit(lambda t, alpha, lnA: model(t, alpha, lnA, t_fit[0]), t_fit, np.log(ratio_fit), params=guessParam, perr_method="systematic", dat_frac_for_systematic_perr=0.2)
+        fit["alpha"] = (temp.popt[0], temp.perr[0][0], temp.perr[0][1])
+        fit["lnA"] = (temp.popt[1], temp.perr[1][0], temp.perr[1][1])
+    
+    print(f"{label}: {fit["alpha"]}")
+    
+    axRatio.plot(t_fit, np.exp(model(t_fit, fit["alpha"][0], fit["lnA"][0], t_fit[0])), color="black")
 
-def parseArgs(args):
-    numSim = -1
-    for key, value in vars(args).items():
-        if key not in commonKeys:
-            if value is not None and len(value) > 1:
-                numSim = len(value)
-                break
-            
-    for key, value in vars(args).items():
-        if key not in commonKeys:
-            if value is None:
-                setattr(args, key, [None for i in range(numSim)])
-            elif len(value) == 1:
-                setattr(args, key, [value[0] for i in range(numSim)])
-    return args
+    return fit
 
 
 def main(args):
-
-    colorDict = {"8wave": "#377eb8", "HLLD": "#984ea3", "HLLC": "#4daf4a", 
-                 "Roe": "#a65628", "bouchut-split": "#f781bf", "bk-usm": "#ff7f00"}
-    labelDict = {"8wave": "Split-Roe", "bouchut-split": "Split-Bouchut", "Roe": "USM-Roe",
-                 "bk-usm": "USM-BK", "HLLC": "USM-HLLC", "HLLD": "USM-HLLD"}
-    orderDict = {"8wave": 0, "bouchut-split": 1, "Roe": 2, "HLLD": 3, "HLLC": 4, "bk-usm": 5}
     
-    fig, axes = pl.subplots(nrows=2, sharex=True, gridspec_kw={'hspace': 0.05}, figsize=(10, 10))
-    axMach, axRatio = axes
+    figMach = pl.figure()
+    figRatio = pl.figure()
+    axMach = figMach.add_subplot(111)
+    axRatio = figRatio.add_subplot(111)
     axRatio.set_xlabel(r"$t / t_{\mathrm{turb}}$")
     axRatio.set_ylabel(r"$E_\mathrm{mag}/E_\mathrm{kin}$")
     axMach.set_ylabel(r"$\mathcal{M}$")
-    # axRatio.tick_params(axis="x",direction="in")
-    # axRatio.tick_params(axis="y",direction="in")
-    # axMach.tick_params(axis="x",direction="in")
-    # axMach.tick_params(axis="y",direction="in")
-    axRatio.set_aspect('auto')
-    axMach.set_aspect('auto')
 
     axRatio.set_yscale("log")
 
-    order = [0 for i in range(len(args.i)) if os.path.isdir(args.i[i])]
+    simList = getSolverSortedList(args.i)
 
-    fileList = [i for i in args.i if os.path.isdir(i)]
-    for index, file in enumerate(fileList):
+    fitDict = {}
+
+    for index, file in enumerate(simList):
         infoDict = getInfoDict(file)
         velocity = infoDict["v"]
-        label = labelDict[infoDict["solver"]]
-        color = colorDict[infoDict["solver"]]
-        addPlot(fig, axMach, axRatio, loadFile(file + "/Turb.dat", args.sr[index]), label, color, args.lf[index], args.uf[index], velocity, args.stf[index])
-        order[index] = orderDict[infoDict["solver"]]
-    order = np.argsort(order)
+        label = SOLVER_DICT[infoDict["solver"]]
+        color = COLOR_DICT[infoDict["solver"]]
+        fit = addPlot(axMach, axRatio, loadFile(file + "/Turb.dat", args.sr[index]), label, color, args.lf[index], args.uf[index], velocity, args.stf[index], args.fit)
+        fitDict[label] = fit
+
+    dumpDict(fitDict, args.o+"/fitDict.pkl")
+
+    order = [i for i in range(0, 6)]
     order[1], order[2], order[3], order[4] = order[3], order[1], order[4], order[2]
     handles, labels = axMach.get_legend_handles_labels()
-    axMach.legend([handles[i] for i in order], [labels[i] for i in order], ncol=3, fontsize=19)
+    axMach.legend([handles[i] for i in order], [labels[i] for i in order], ncol=3)
     if args.ld is not None:
         axRatio.set_ylim(bottom=args.ld)
-    fig.savefig(args.o)
+    if args.ud is not None:
+        axRatio.set_ylim(top=args.ud)
+    figMach.savefig(args.o+"/MachGrowth.pdf")
+    figRatio.savefig(args.o+"/RatioGrowth.pdf")
 
-
-commonKeys = ["ld"]
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Automate production grade plots")
     parser.add_argument("-i", type=str, nargs="*", help="Input Directories")
-    parser.add_argument("-o", type=str, default="./Turb.pdf", help="Output Directory")
-    parser.add_argument("-lf", type=float, nargs="*", help="Lower bound for fit")
-    parser.add_argument("-uf", type=float, nargs="*", help="Upper bound for fit")
-    parser.add_argument("-sr", type=int, nargs="*", default=[0], help="Skip rows")
-    parser.add_argument("-stf", type=float, nargs="*", default=[1.0], help="Skip turnover time before fit")
+    parser.add_argument("-o", type=str, default="./", help="Output Directory")
+    parser.add_argument("-lf", type=float, nargs="*", default=[1e-7], help="Lower bound for fit")
+    parser.add_argument("-uf", type=float, nargs="*", default=[1e-3], help="Upper bound for fit")
+    parser.add_argument("-sr", type=int, nargs="*", default=[20000], help="Skip rows")
+    parser.add_argument("-stf", type=float, nargs="*", default=[5.0], help="Skip turnover time before fit")
     parser.add_argument("-ld", type=float, help="Low bound to display")
+    parser.add_argument("-ud", type=float, help="Upper bound to display")
+    parser.add_argument("-fit", type=str, default="syst", help="Fit method to use")
 
-    args = parseArgs(parser.parse_args())
+    commonKeys = ["ld", "ud", "fit"]
+
+    args = parseArgs(parser.parse_args(), commonKeys)
     print(args)
 
     main(args)

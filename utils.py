@@ -1,20 +1,24 @@
 import os
 import pickle
-from myconfig import *
+import numpy as np
+from constants import *
 
 
-E_MAG_COLUMN_INDEX = 11
-E_KIN_COLUMN_INDEX = 9
-V_RMS_COLUMN_INDEX = 13
-TIME_COLUMN_INDEX = 0
+def getSolverSortedList(pathList):
+    order = []
+    cleanPathList = [x for x in pathList if os.path.isdir(x)]
+    for sim in cleanPathList:
+        if not os.path.exists(sim + "/info.pkl"):
+            raise Exception("No info.pkl file found in " + sim)
+        infoDict = getInfoDict(sim)
+        order.append(ORDER_DICT[infoDict["solver"]])
+    srt = np.argsort(np.array(order))
+    return [cleanPathList[i] for i in srt]
 
+def dumpDict(dictionary, filename):
+    with open(filename, "wb") as f:
+        pickle.dump(dictionary, f)
 
-SOLVER_DICT = {"8wave": "Split-Roe", "bouchut-split": "Split-Bouchut", "Roe": "USM-Roe", 
-              "HLLD": "USM-HLLD", "HLLC": "USM-HLLC", "bk-usm": "USM-BK"}
-COLOR_DICT = {"8wave": "#377eb8", "HLLD": "#984ea3", "HLLC": "#4daf4a", 
-              "Roe": "#a65628", "bouchut-split": "#f781bf", "bk-usm": "#ff7f00"}
-ORDER_DICT = {"8wave": 0, "bouchut-split": 1, "Roe": 2, "HLLD": 3, "HLLC": 4, "bk-usm": 5}
-FACT_DICT = {"bk-usm": 1.0, "Roe": 0.1, "HLLC": 0.01, "HLLD": 0.001, "bouchut-split": 0.0001, "8wave": 0.00001}
 
 def getInfoDict(sim):
     '''
