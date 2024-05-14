@@ -31,7 +31,7 @@ def getEMagOverEKin(f):
     return (getEMag(f) / getEKin(f)).flatten()
 
 
-def loadFile(path, shift):
+def loadFile(path, shift=0):
     return np.loadtxt(path, unpack=True, skiprows=shift)
 
 

@@ -15,9 +15,15 @@ def getSolverSortedList(pathList):
     srt = np.argsort(np.array(order))
     return [cleanPathList[i] for i in srt]
 
+
 def dumpDict(dictionary, filename):
     with open(filename, "wb") as f:
         pickle.dump(dictionary, f)
+
+
+def loadDict(filePath):
+    with open(filePath, "rb") as f:
+        return pickle.load(f)
 
 
 def getInfoDict(sim):
