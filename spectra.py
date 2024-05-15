@@ -1,21 +1,28 @@
-import numpy as np  
-import argparse
-import matplotlib.pyplot as pl
+#!/usr/bin/env python3
 import sys
 import os
 import glob
+
+import matplotlib
+matplotlib.use('Agg')
+
+import numpy as np  
+import argparse
+import matplotlib.pyplot as pl
 import pandas as pd
-from common import *
+from scipy.special import kn
+from scipy.optimize import fminbound
+from scipy.interpolate import CubicSpline
+
+from constants import *
+from utils import *
+from myconfig import *
 import designParams
 sys.path.append(PYTHON_PATH)
 import cfpack as cfp
 import flashlib as fl
-from decimal import Decimal
 import turblib as tl
-from scipy.special import kn
-from scipy.optimize import curve_fit
-from scipy.optimize import fminbound
-from scipy.interpolate import CubicSpline
+
 
 
 def Re_fun(k_tilde_nu, c_nu):
@@ -32,13 +39,6 @@ def Rm_fun(k_tilde_nu, c_nu, k_tilde_eta, p_eta, c_eta):
     k_nu = k_tilde_nu
     Pm = (k_eta/(c_eta*k_nu))**2
     return Pm * Re_fun(k_tilde_nu, c_nu)
-
-def getNum(num):
-    return float((f"{Decimal(num):.1E}").split("E")[0])
-
-
-def getPwr(num):
-    return int((f"{Decimal(num):.1E}").split("E")[1])
 
 
 def Log10_P_kin(k, A_kin, p_bn, k_bn, k_tilde_nu):
@@ -133,7 +133,7 @@ def generateSpectra(simDir, verbose, spectType, infoDict, lf, uf, stf, n=1):
     tl.write_spect(outfile, averDat, headerAver, verbose=verbose)
 
 
-def plotSpectra(simDir, verbose, spectType, fact, infoDict, params, scp=False, compensate=False):
+def plotSpectra(simDir, verbose, spectType, fact, infoDict, params, outdir, compensate=False, fit=True):
     '''
     verbsoe  : Could be 0 or 1
     spectType: Could be 'vels' or 'mags' or 'curr'
@@ -174,37 +174,37 @@ def plotSpectra(simDir, verbose, spectType, fact, infoDict, params, scp=False, c
     else:
         plObj = cfp.plot(compensateFact * fact * pTot, k, yerr=fact * err, shaded_err=True, label=SOLVER_DICT[infoDict['solver']], color=COLOR_DICT[infoDict['solver']])
 
-    fitDict = {}
+    if fit:
+        fitDict = {}
+        fitDict = fit_func(spectType, simDir, kFit, log10PTotFit, deltaLog10PTotFit, params, compensateFitFact, fact, fitDict, verbose, infoDict)
+    else:
+        if spectType == "mags":
+            fitDict = loadDict(f"{outdir}/magFitDict.pkl")[infoDict['solver']]
+            cfp.plot(compensateFitFact * fact * 10**Log10_P_mag(kFit, *(fitDict["A_mag"][0], fitDict["p_mag"][0], fitDict["p_eta"][0], fitDict["k_tilde_eta"][0])), kFit, color="black")
+        elif spectType == "vels":
+            fitDict = loadDict(f"{outdir}/kinFitDict.pkl")[infoDict['solver']]
+            cfp.plot(compensateFitFact * fact * 10**Log10_P_kin(kFit, *(fitDict["A_kin"][0], fitDict["p_bn"][0], fitDict["k_bn"][0], fitDict["k_nu"][0])), kFit, color="black")
+        elif spectType == "cur":
+            fitDict = loadDict(f"{outdir}/curFitDict.pkl")[infoDict['solver']]
+
+
+    return plObj, fitDict
+
+
+def fit_func(spectType, simDir, kFit, log10PTotFit, deltaLog10PTotFit, params, compensateFitFact, fact, fitDict, verbose, infoDict):
 
     if spectType == "mags":
         if verbose: print("Fitting for:", infoDict['solver'])
-        if scp is False:
-            magFit = cfp.fit(Log10_P_mag, kFit, log10PTotFit, xerr=None, yerr=deltaLog10PTotFit,
-                              params=params, max_nfev=100000, n_random_draws=10000)
-            cfp.plot(compensateFitFact * fact * 10**Log10_P_mag(kFit, *(magFit.popt)), kFit, color="black")
-            fitDict["A_mag"] = (magFit.popt[0], magFit.perr[0][1], magFit.perr[0][0])
-            fitDict["p_mag"] = (magFit.popt[1], magFit.perr[1][1], magFit.perr[1][0])
-            fitDict["p_eta"] = (magFit.popt[2], magFit.perr[2][1], magFit.perr[2][0])
-            fitDict["k_tilde_eta"] = (magFit.popt[3], magFit.perr[3][1], magFit.perr[3][0])
-        else:
-            A_mag = params['A_mag']
-            p_mag = params['p_mag']
-            p_eta = params['p_eta']
-            k_tilde_eta = params['k_tilde_eta']
-            magPopt, magCor = curve_fit(Log10_P_mag, kFit, log10PTotFit, sigma=deltaLog10PTotFit, absolute_sigma=True,
-                                         p0=[A_mag[1], p_mag[1], p_eta[1], k_tilde_eta[1]], 
-                                         bounds=([A_mag[0], p_mag[0], p_eta[0], k_tilde_eta[0]], [A_mag[2], p_mag[2], p_eta[2], k_tilde_eta[2]]))
-            cfp.plot(fact * 10**Log10_P_mag(kFit, *magPopt) * compensateFitFact, kFit, color="black")
-            print(f"A_mag: {magPopt[0]}±{magCor[0, 0]**0.5}")
-            print(f"p_mag: {magPopt[1]}±{magCor[1, 1]**0.5}")
-            print(f"p_eta: {magPopt[2]}±{magCor[2, 2]**0.5}")
-            print(f"k_tilde_eta: {magPopt[3]}±{magCor[3, 3]**0.5}")
-            fitDict["A_mag"] = (magPopt[0], magCor[0, 0]**0.5, -magCor[0, 0]**0.5)
-            fitDict["p_mag"] = (magPopt[1], magCor[1, 1]**0.5, -magCor[1, 1]**0.5)
-            fitDict["p_eta"] = (magPopt[2], magCor[2, 2]**0.5, -magCor[2, 2]**0.5)
-            fitDict["k_tilde_eta"] = (magPopt[3], magCor[3, 3]**0.5, -magCor[3, 3]**0.5)
+        magFit = cfp.fit(Log10_P_mag, kFit, log10PTotFit, xerr=None, yerr=deltaLog10PTotFit,
+                            params=params, max_nfev=100000, n_random_draws=10000)
+        cfp.plot(compensateFitFact * fact * 10**Log10_P_mag(kFit, *(magFit.popt)), kFit, color="black")
+        fitDict["A_mag"] = (magFit.popt[0], magFit.perr[0][0], magFit.perr[0][1])
+        fitDict["p_mag"] = (magFit.popt[1], magFit.perr[1][0], magFit.perr[1][1])
+        fitDict["p_eta"] = (magFit.popt[2], magFit.perr[2][0], magFit.perr[2][1])
+        fitDict["k_tilde_eta"] = (magFit.popt[3], magFit.perr[3][0], magFit.perr[3][1])
 
     elif spectType == "cur":
+        if verbose: print("Working with:", infoDict['solver'])
         infoDict = getInfoDict(simDir)
         spectraDir = simDir+"/spectra"
         kList = []
@@ -224,40 +224,22 @@ def plotSpectra(simDir, verbose, spectType, fact, infoDict, params, scp=False, c
         # print(kList)
         k_eta_23 = np.percentile(kList, 50)
         k_eta_23_pos_er = np.percentile(kList, 84) - k_eta_23
-        k_eta_23_neg_er = k_eta_23 - np.percentile(kList, 16)
-        fitDict["k_eta_23"] = (k_eta_23, k_eta_23_pos_er, -k_eta_23_neg_er)
-        print(f"{SOLVER_DICT[infoDict['solver']]}: {k_eta_23:.2f}^{{{k_eta_23_pos_er:.2f}}}_{{{-k_eta_23_neg_er:.2f}}}")
+        k_eta_23_neg_er = np.percentile(kList, 16) - k_eta_23
+        fitDict["k_eta_23"] = (k_eta_23, k_eta_23_neg_er, k_eta_23_pos_er)
+        print(f"{SOLVER_DICT[infoDict['solver']]}: {k_eta_23:.2f}^{{{k_eta_23_pos_er:.2f}}}_{{{k_eta_23_neg_er:.2f}}}")
         # ylim = plCurObj.gca().get_ylim()
         # plCurObj.plot([k_nu_23, k_nu_23], [ylim[0], 2e-10], color=colorDict[infoDict['solver']], scaley=False)
 
     elif spectType == "vels":
         if verbose: print("Fitting for:", infoDict['solver'])
-        if scp is False:
-            kinFit = cfp.fit(Log10_P_kin, kFit, log10PTotFit, xerr=None, yerr=deltaLog10PTotFit, params=params, n_random_draws=10000)
-            cfp.plot(fact * 10**Log10_P_kin(kFit, *(kinFit.popt)) * compensateFitFact, kFit, color="black")
-            fitDict["A_kin"] = (kinFit.popt[0], kinFit.perr[0][1], kinFit.perr[0][0])
-            fitDict["p_bn"] = (kinFit.popt[1], kinFit.perr[1][1], kinFit.perr[1][0])
-            fitDict["k_bn"] = (kinFit.popt[2], kinFit.perr[2][1], kinFit.perr[2][0])
-            fitDict["k_tilde_nu"] = (kinFit.popt[3], kinFit.perr[3][1], kinFit.perr[3][0])
-        else:
-            A_kin = params['A_kin']
-            p_bn = params['p_bn']
-            k_bn = params['k_bn']
-            k_tilde_nu = params['k_tilde_nu']
-            kinPopt, kinCor = curve_fit(Log10_P_kin, kFit, log10PTotFit, sigma=deltaLog10PTotFit, absolute_sigma=True, 
-                                        p0=[A_kin[1], p_bn[1], k_bn[1], k_tilde_nu[1]], maxfev=10000,
-                                        bounds=([A_kin[0], p_bn[0], k_bn[0], k_tilde_nu[0]], [A_kin[2], p_bn[2], k_bn[2], k_tilde_nu[2]]))
-            cfp.plot(fact * 10**Log10_P_kin(kFit, *kinPopt) * compensateFitFact, kFit, color="black")
-            print(f"A_kin: {kinPopt[0]}±{kinCor[0, 0]**0.5}")
-            print(f"p_bn: {kinPopt[1]}±{kinCor[1, 1]**0.5}")
-            print(f"k_bn: {kinPopt[2]}±{kinCor[2, 2]**0.5}")
-            print(f"k_tilde_nu: {kinPopt[3]}±{kinCor[3, 3]**0.5}")
-            fitDict["A_kin"] = (kinPopt[0], kinCor[0, 0]**0.5, -kinCor[0, 0]**0.5)
-            fitDict["p_bn"] = (kinPopt[1], kinCor[1, 1]**0.5, -kinCor[1, 1]**0.5)
-            fitDict["k_bn"] = (kinPopt[2], kinCor[2, 2]**0.5, -kinCor[2, 2]**0.5)
-            fitDict["k_tilde_nu"] = (kinPopt[3], kinCor[3, 3]**0.5, -kinCor[3, 3]**0.5)
-
-    return plObj, fitDict
+        kinFit = cfp.fit(Log10_P_kin, kFit, log10PTotFit, xerr=None, yerr=deltaLog10PTotFit, params=params, n_random_draws=10000)
+        cfp.plot(fact * 10**Log10_P_kin(kFit, *(kinFit.popt)) * compensateFitFact, kFit, color="black")
+        fitDict["A_kin"] = (kinFit.popt[0], kinFit.perr[0][0], kinFit.perr[0][1])
+        fitDict["p_bn"] = (kinFit.popt[1], kinFit.perr[1][0], kinFit.perr[1][1])
+        fitDict["k_bn"] = (kinFit.popt[2], kinFit.perr[2][0], kinFit.perr[2][1])
+        fitDict["k_nu"] = (kinFit.popt[3], kinFit.perr[3][0], kinFit.perr[3][1])
+    
+    return fitDict
 
 def postPlot(plObj, spectType, compensated=False):
     ax = plObj.gca()
@@ -292,14 +274,12 @@ def plotScaleLoc(plObj, solverFit, type):
         ax.text(maxKEta, 2.5*ylim[0], r"$k_\eta$", color="black")
     elif type == "vels":
         maxKNu = 0
-        c_nu_22 = 0.025
-        c_nu_23 = 0.116
         for solver in solverFit:
             val = solverFit[solver]
-            k_nu_23 = val["k_tilde_nu"][0] * c_nu_23 / c_nu_22
-            ax.plot([k_nu_23, k_nu_23], [ylim[0], 2*ylim[0]], color=COLOR_DICT[solver], scaley=False)
-            if k_nu_23 > maxKNu:
-                maxKNu = k_nu_23
+            k_nu = val["k_nu"][0]
+            ax.plot([k_nu, k_nu], [ylim[0], 2*ylim[0]], color=COLOR_DICT[solver], scaley=False)
+            if k_nu > maxKNu:
+                maxKNu = k_nu
         ax.text(maxKNu, 2.5*ylim[0], r"$k_\nu$", color="black")
     elif type == "cur":
         maxKEta = 0
@@ -312,12 +292,7 @@ def plotScaleLoc(plObj, solverFit, type):
 
 def main(args):
 
-    simListTemp = [sim for sim in args.i if os.path.isdir(sim)]
-    simList = ["" for i in simListTemp]
-    # for i in simListTemp:
-    #     infoDict = getInfoDict(i)
-    #     simList[ORDER_DICT[infoDict['solver']]] = i
-    simList=simListTemp
+    simList = getSolverSortedList(args.i)
 
     if args.kin_spect:
         for sim in simList:
@@ -329,174 +304,78 @@ def main(args):
         for sim in simList:
             generateSpectra(sim, args.v, "mags", getInfoDict(sim), args.lf, args.uf, args.stf, args.n)
 
-    if args.kin_plot or args.table:
+    if args.kin_plot:
         solverKinFit = {}
         for simDir in simList:
             infoDict = getInfoDict(simDir)
             fact = FACT_DICT[infoDict['solver']]
+            fit = True
+            if not args.refit and os.path.exists(f"{args.o}/kinFitDict.pkl"):
+                fit = False
             kinParams = {"A_kin": [0, 0.0015, np.inf], "p_bn": [0, 1, np.inf], "k_bn": [0, 4.0, 128], "k_tilde_nu": [0, 4.0, 128]}
-            plKinObj, fitDict = plotSpectra(simDir, 1, "vels", fact, infoDict, kinParams, scp=False)
+            plKinObj, fitDict = plotSpectra(simDir, 1, "vels", fact, infoDict, kinParams, args.o, compensate=args.compensate, fit=fit)
             solverKinFit[infoDict['solver']] = fitDict
-            postPlot(plKinObj, "vels")
+            postPlot(plKinObj, "vels", args.compensate)
+        dumpDict(solverKinFit, f"{args.o}/kinFitDict.pkl")
         plotScaleLoc(plKinObj, solverKinFit, "vels")
         plKinObj.savefig("Kinetic Spectra.pdf")
         plKinObj.clf(); plKinObj.cla(); plKinObj.close(); plKinObj = None
 
     
-    if args.mag_plot or args.table:
+    if args.mag_plot:
         solverMagFit = {}
         for simDir in simList:
             infoDict = getInfoDict(simDir)
             fact = FACT_DICT[infoDict['solver']]
+            fit = True
+            if not args.refit and os.path.exists(f"{args.o}/magFitDict.pkl"):
+                fit = False
             magParams = {"A_mag": [0, 0.0001, np.inf], "p_mag": [0, 1, np.inf], "p_eta": [0, 1, np.inf], "k_tilde_eta": [0, 4.0, 128]}
-            plMagObj, fitDict = plotSpectra(simDir, 1, "mags", fact, infoDict, magParams, scp=True)
+            plMagObj, fitDict = plotSpectra(simDir, 1, "mags", fact, infoDict, magParams, args.o, compensate=False, fit=fit)
             solverMagFit[infoDict['solver']] = fitDict
             postPlot(plMagObj, "mags")
+        dumpDict(solverMagFit, f"{args.o}/magFitDict.pkl")
         plotScaleLoc(plMagObj, solverMagFit, "mags")
         plMagObj.savefig("Magnetic Spectra.pdf")
         plMagObj.clf(); plMagObj.cla(); plMagObj.close(); plMagObj = None
 
-    if args.cur_plot or args.table:
+    if args.cur_plot:
         solverCurFit = {}
         for simDir in simList:
             infoDict = getInfoDict(simDir)
             fact = FACT_DICT[infoDict['solver']]
-            plCurObj, fitDict = plotSpectra(simDir, 1, "cur", fact, infoDict, None, scp=True)
+            fit = True
+            if not args.refit and os.path.exists(f"{args.o}/curFitDict.pkl"):
+                fit = False
+            plCurObj, fitDict = plotSpectra(simDir, 1, "cur", fact, infoDict, None, args.o, compensate=False, fit=fit)
             solverCurFit[infoDict['solver']] = fitDict
             postPlot(plCurObj, "cur")
+        dumpDict(solverCurFit, f"{args.o}/curFitDict.pkl")
         plotScaleLoc(plCurObj, solverCurFit, "cur")
         plCurObj.savefig("Current Spectra.pdf")
         plCurObj.clf(); plCurObj.cla(); plCurObj.close(); plCurObj = None
 
-    if args.table:
-        solverList = ["8wave", "bouchut-split", "Roe", "HLLD", "HLLC", "bk-usm"]
-        table1Data = ''''''
-        table2Data = ''''''
-
-        c_nu = 0.025
-        c_nu_pos_er = 0.005
-        c_nu_neg_er = -0.006
-        c_nu_pos = c_nu + c_nu_pos_er
-        c_nu_neg = c_nu + c_nu_neg_er
-
-        coef = 2.3
-        coef_pos_er = 0.8
-        coef_neg_er = -0.5
-        coef_pos = coef + coef_pos_er
-        coef_neg = coef + coef_neg_er
-
-        for solver in solverList:
-            kinFit = solverKinFit[solver]
-            curFit = solverCurFit[solver]
-            
-            p_kin = -1.7
-            p_nu = 1.0
-            p_bn = kinFit["p_bn"][0]
-            p_bn_pos_er = kinFit["p_bn"][1]
-            p_bn_neg_er = kinFit["p_bn"][2]
-            k_bn = kinFit["k_bn"][0]
-            k_bn_pos_er = kinFit["k_bn"][1]
-            k_bn_neg_er = kinFit["k_bn"][2]
-            k_nu = kinFit["k_tilde_nu"][0]
-            k_nu_pos_er = kinFit["k_tilde_nu"][1]
-            k_nu_neg_er = kinFit["k_tilde_nu"][2]
-            k_nu_pos = k_nu + k_nu_pos_er
-            k_nu_neg = k_nu + k_nu_neg_er
-
-            k_eta = curFit["k_eta_23"][0]
-            k_eta_pos_er = curFit["k_eta_23"][1]
-            k_eta_neg_er = curFit["k_eta_23"][2]
-            k_eta_pos = k_eta + k_eta_pos_er
-            k_eta_neg = k_eta + k_eta_neg_er
-
-            Re = (k_nu / (c_nu * 2))**(4/3)
-            Re_pos = ((k_nu_pos / (c_nu_neg * 2))**(4/3))
-            Re_neg = ((k_nu_neg / (c_nu_pos * 2))**(4/3))
-            Re_pos_er = Re_pos - Re
-            Re_neg_er = Re_neg - Re
-            Re_pos_er_disp = round(Re_pos_er / 10**getPwr(Re), 1)
-            Re_neg_er_disp = round(Re_neg_er / 10**getPwr(Re), 1)
-
-            Pm = (k_eta / (coef * k_nu))**2
-            Pm_pos = ((k_eta_pos / (coef_neg * k_nu_neg))**2)
-            Pm_neg = ((k_eta_neg / (coef_pos * k_nu_pos))**2)
-            Pm_pos_er = Pm_pos - Pm
-            Pm_neg_er = Pm_neg - Pm
-            Pm_pos_er_disp = f"{Pm_pos_er:.1f}"
-            Pm_neg_er_disp = f"{Pm_neg_er:.1f}"
-
-            Rm = Pm * Re
-            Rm_pos = Pm_pos * Re_pos
-            Rm_neg = Pm_neg * Re_neg
-            Rm_pos_er = Rm_pos - Rm
-            Rm_neg_er = Rm_neg - Rm
-            Rm_pos_er_disp = round(Rm_pos_er / 10**getPwr(Rm), 1)
-            Rm_neg_er_disp = round(Rm_neg_er / 10**getPwr(Rm), 1)
-
-            table1Data += f"{SOLVER_DICT[solver]} & ----- & ${p_bn:.2f}^{{+{p_bn_pos_er:.2f}}}_{{{p_bn_neg_er:.2f}}}$ & ${k_bn:.1f}^{{+{k_bn_pos_er:.1f}}}_{{{k_bn_neg_er:.1f}}}$ & ${k_nu:.2f}^{{+{k_nu_pos_er:.2f}}}_{{{k_nu_neg_er:.2f}}}$ &  ${k_eta:.1f}^{{+{k_eta_pos_er:.1f}}}_{{{k_eta_neg_er:.1f}}}$ \\\\ \n"
-            table2Data += f"{SOLVER_DICT[solver]} & ${getNum(Re)}\\times10^{{{getPwr(Re)}}}$ & ${getNum(Rm)}\\times10^{{{getPwr(Rm)}}}$ "
-
-        table1Str = f'''
-        \\begin{{table*}}
-        \\centering
-        \\setlength{{\\tabcolsep}}{{1.8pt}}
-        \\renewcommand{{\\arraystretch}}{{1.5}}
-        \\begin{{tabular}}{{cccccccc}}
-        \\hline
-        Name & $\\tau$ & $p_\\mathrm{{bn}}$ & $k_\\mathrm{{bn}}$ & $\\tilde{{k}}_\\mathrm{{\\nu}}(=k_\\mathrm{{\\nu}})$ & $k_\\mathrm{{\\eta}}$\\\\
-        (1) & (2) & (3) & (4) & (5) & (6)\\\\
-        \\hline
-        {table1Data}
-        \\hline
-        \\end{{tabular}}
-        \\caption{{All parameters were measured/derived by averaging over the kinematic phase of the dynamo when $t>5t_\\mathrm{{turb}}$ and $10^{{-7}}\\le E_\\mathrm{{mag}}/E_\\mathrm{{kin}} \\le 10^{{-3}}$. Columns: \\textbf{{(1)}} Name of the numerical scheme as described in Table~\\ref{{tab:solvers}}. \\textbf{{(2)}} Exponent of the power law part of the kinetic spectra. \\textbf{{(3)}} Exponent of the bottleneck effect. \\textbf{{(4)}} Scaling wave number of the bottleneck effect. \\textbf{{(5)}} Viscous dissipation wave number. \\textbf{{(6)}} Resistive dissipation wave number.}}
-        \\label{{tab:Turbulent dynamo fit parameters}}
-        \\end{{table*}}
-        '''
-        table2Str = f'''
-        \\begin{{table*}}
-        \\centering
-        \\setlength{{\\tabcolsep}}{{1.8pt}}
-        \\renewcommand{{\\arraystretch}}{{1.5}}
-        \\begin{{tabular}}{{ccc}}
-        \\hline
-        Name & $Re$ & $Rm$ \\\\
-        (1) & (2) & (3) \\\\
-        \\hline
-        {table2Data}
-        \\hline
-        \\end{{tabular}}
-        \\caption{{Columns: \\textbf{{(1)}} Name of the numerical scheme as described in Table~\\ref{{tab:solvers}}. \\textbf{{(2)}} Effective Hydrodynamic Reynolds number. \\textbf{{(3)}} Effective Magnetic Reynolds number.}}
-        \\label{{tab:Turbulent dynamo effective flow numbers}}
-        \\end{{table*}}
-        '''
-        table1File = open("Table1.txt", "w")
-        table1File.write(table1Str)
-        table1File.close()
-        table2File = open("Table2.txt", "w")
-        table2File.write(table2Str)
-        table2File.close()
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Automate production grade plots")
     parser.add_argument("-i", type=str, nargs="*", help="Input Directories")
     parser.add_argument("-o", type=str, default="./", help="Output Directory")
-    parser.add_argument("-kin_spect", type=int, default=0, help="Generate kinetic spectra")
-    parser.add_argument("-cur_spect", type=int, default=0, help="Generate current spectra")
-    parser.add_argument("-mag_spect", type=int, default=0, help="Generate magnetic spectra")
-    parser.add_argument("-kin_plot", type=int, default=0, help="Plot kinetic spectra")
-    parser.add_argument("-cur_plot", type=int, default=0, help="Plot current spectra")
-    parser.add_argument("-mag_plot", type=int, default=0, help="Plot magnetic spectra")
-    # parser.add_argument("-legend", type=int, default=0, help="Want legend? 0 will place legend on Kinetic spectra only")
-    parser.add_argument("-table", type=int, default=0, help="Generate table of fit parameters")
+    parser.add_argument("-kin_spect", action="store_true", help="Generate kinetic spectra")
+    parser.add_argument("-cur_spect", action="store_true", help="Generate current spectra")
+    parser.add_argument("-mag_spect", action="store_true", help="Generate magnetic spectra")
+    parser.add_argument("-kin_plot", action="store_true", help="Plot kinetic spectra")
+    parser.add_argument("-compensate", action="store_true", help="Compensate for k^2. Valid only for the kinetic spectra.")
+    parser.add_argument("-cur_plot", action="store_true", help="Plot current spectra")
+    parser.add_argument("-mag_plot", action="store_true", help="Plot magnetic spectra")
     parser.add_argument("-v", type=int, default=0, help="Verbose")
-    parser.add_argument("-lf", type=float, help="Lower bound for kinematic phase")
-    parser.add_argument("-uf", type=float, help="Upper bound for kinematic phase")
-    parser.add_argument("-stf", type=float, help="Start time for kinematic phase")
+    parser.add_argument("-lf", type=float, default=1e-7, help="Lower bound for kinematic phase")
+    parser.add_argument("-uf", type=float, default=1e-3, help="Upper bound for kinematic phase")
+    parser.add_argument("-stf", type=float, default=5.0, help="Start time for kinematic phase")
     parser.add_argument("-n", type=int, default=1, help="Number of processors for spectra generation")
+    parser.add_argument("-refit", action="store_true", help="Refit the spectra")
 
-    commonKeys = ["n", "o", "v", "table", "mag_spect", "kin_spect", "cur_spect", "mag_plot", "kin_plot", "cur_plot", "legend", "lf", "uf", "stf"]
+    commonKeys = ["n", "o", "v", "mag_spect", "kin_spect", "cur_spect", "mag_plot", "kin_plot", "cur_plot", "legend", "lf", "uf", "stf", "refit", "compensate"]
 
     args = parseArgs(parser.parse_args(), commonKeys)
     print(args)

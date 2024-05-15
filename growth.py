@@ -77,6 +77,7 @@ def main(args):
     axRatio.set_xlabel(r"$t / t_{\mathrm{turb}}$")
     axRatio.set_ylabel(r"$E_\mathrm{mag}/E_\mathrm{kin}$")
     axMach.set_ylabel(r"$\mathcal{M}$")
+    axMach.axes.xaxis.set_ticklabels([])
 
     axRatio.set_yscale("log")
 

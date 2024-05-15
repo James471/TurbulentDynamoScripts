@@ -2,23 +2,19 @@
 import argparse
 import numpy as np
 import textwrap
-import pickle
 import subprocess
 import os
 import re
 import sys
-sys.path.append("/home/100/jw5893/flash-tools/python")
+
+from myconfig import *
+from datautils import *
+from constants import *
+from utils import *
+
+sys.path.append("PYTHON_PATH")
 import flashlib
 
-
-E_MAG_COLUMN_INDEX = 11
-E_KIN_COLUMN_INDEX = 9
-V_RMS_COLUMN_INDEX = 13
-CS_RMS_COLUMN_INDEX = 14
-TIME_COLUMN_INDEX = 0
-
-SOLVER_DICT = {"8wave": "Split-Roe", "bouchut-split": "Split-Bouchut", "Roe": "USM-Roe", 
-                "HLLD": "USM-HLLD", "HLLC": "USM-HLLC", "bk-usm": "USM-BK"}
 
 X_LABEL_DICT = {"Split-Roe": "", "Split-Bouchut": "", "USM-Roe": "",
                 "USM-HLLD": "\$x/L\$", "USM-HLLC": "\$x/L\$", "USM-BK": "\$x/L\$"}
@@ -32,39 +28,6 @@ X_TICK_DICT = {"Split-Roe": "\"\"", "Split-Bouchut": "\"\"", "USM-Roe": "\"\"",
 Y_TICK_DICT = {"Split-Roe": None, "Split-Bouchut": "\"\"", "USM-Roe": "\"\"",
                 "USM-HLLD": None, "USM-HLLC": "\"\"", "USM-BK": "\"\""}
 
-
-def loadFile(path, shift=0):
-    return np.loadtxt(path, unpack=True, skiprows=shift)
-
-
-def getInfoDict(dirPath):
-    filePath = dirPath + "/info.pkl"
-    if os.path.exists(filePath):
-        with open(filePath, "rb") as f:
-            return pickle.load(f)
-    else:
-        raise FileNotFoundError(f"No info.pkl file found in {dirPath}.")
-
-
-def getTurnOverTime(v):
-    return 1/(2*v)
-
-
-def getNonDimensionalTime(f, v):
-    turnOverTime = getTurnOverTime(v)
-    return (f[TIME_COLUMN_INDEX] / turnOverTime).flatten()
-
-
-def getEMag(f):
-    return f[E_MAG_COLUMN_INDEX].flatten()
-
-
-def getEKin(f):
-    return f[E_KIN_COLUMN_INDEX].flatten()
-
-
-def getEMagOverEKin(f):
-    return (getEMag(f) / getEKin(f)).flatten()
 
 
 def getPlotFileNumber(turbFile, velocity, r, stf, lf, dt):
@@ -80,7 +43,7 @@ def getPlotFileNumber(turbFile, velocity, r, stf, lf, dt):
     return plotFileNumber
 
 
-def makePlots(simDirList, type, stream_var, r, stf, lf, outdir, cbar_type, flashplotlib_path):
+def makePlots(simDirList, type, stream_var, r, stf, lf, outdir, cbar_type, redo):
     
     plotFileDict = {}
     boundDict = {}
@@ -91,40 +54,46 @@ def makePlots(simDirList, type, stream_var, r, stf, lf, outdir, cbar_type, flash
     elif type == 'kin':
         datasetName = 'ekin'
 
-    for index, simDir in enumerate(simDirList):
-        
-        infoDict = getInfoDict(simDir)
-        velocity = infoDict["v"]
-        solver = SOLVER_DICT[infoDict["solver"]]
-        dt = infoDict["dt"]
+    if not redo and os.path.exists(f"{outdir}/{type}Bounds.pkl"):
+        boundDict = loadDict(f"{outdir}/{type}Bounds.pkl")
+        print(f"Loaded {type} bounds:", boundDict)
+    else:
+        for index, simDir in enumerate(simDirList):
 
-        print(f"Processing for {solver}")
+            infoDict = getInfoDict(simDir)
+            velocity = infoDict["v"]
+            solver = SOLVER_DICT[infoDict["solver"]]
+            dt = infoDict["dt"]
 
-        print("Loading Turb.dat")
-        turbFile = loadFile(simDir + "/Turb.dat", 10)
-        print("Loaded Turb.dat")
+            print(f"Processing for {solver}")
 
-        plotFileNumber = getPlotFileNumber(turbFile, velocity, 1e-6, 5, 1e-7, dt)
-        plotFile = simDir + "/Turb_hdf5_plt_cnt_" + str(plotFileNumber).zfill(4)
-        plotFileDict[solver] = plotFile
+            print("Loading Turb.dat")
+            turbFile = loadFile(simDir + "/Turb.dat", 10)
+            print("Loaded Turb.dat")
 
-        plotFileObj = flashlib.FlashGG(plotFile)
-        snapshotTime = plotFileObj.scalars['time']
+            plotFileNumber = getPlotFileNumber(turbFile, velocity, r, stf, lf, dt)
+            plotFile = simDir + "/Turb_hdf5_plt_cnt_" + str(plotFileNumber).zfill(4)
+            plotFileDict[solver] = plotFile
 
-        time = turbFile[TIME_COLUMN_INDEX]
-        e = turbFile[E_MAG_COLUMN_INDEX]
-        eTot = e[time==snapshotTime][0]
+            plotFileObj = flashlib.FlashGG(plotFile)
+            snapshotTime = plotFileObj.scalars['time']
 
-        cmd = f'python3 {flashplotlib_path} -i {plotFile} -d {datasetName} -verbose 2 -outtype pdf -outdir {outdir} -outname {solver}-{type} -direction z -ncpu 1 -colorbar 0 -data_transform q/{eTot}'
-        output = subprocess.check_output(cmd, shell=True).decode('utf-8')
-        searchString = "flashplotlib.py: prep_map: min, max of data.*"
-        iterms = re.findall(searchString, output)
-        boundString = iterms[0]
-        boundString = boundString.replace("flashplotlib.py: prep_map: min, max of data = ", "")
-        minBound, maxBound = boundString.split(",")
-        minBound, maxBound = float(minBound), float(maxBound)
-        boundDict[solver] = (minBound, maxBound)
-        turbFileDict[solver] = turbFile
+            time = turbFile[TIME_COLUMN_INDEX]
+            e = turbFile[E_MAG_COLUMN_INDEX]
+            eTot = e[time==snapshotTime][0]
+
+            cmd = f'python3 {PYTHON_PATH}/flashplotlib.py -i {plotFile} -d {datasetName} -verbose 2 -outtype pdf -outdir {outdir} -outname {solver}-{type} -direction z -ncpu 1 -colorbar 0 -data_transform q/{eTot}'
+            output = subprocess.check_output(cmd, shell=True).decode('utf-8')
+            searchString = "flashplotlib.py: prep_map: min, max of data.*"
+            iterms = re.findall(searchString, output)
+            boundString = iterms[0]
+            boundString = boundString.replace("flashplotlib.py: prep_map: min, max of data = ", "")
+            minBound, maxBound = boundString.split(",")
+            minBound, maxBound = float(minBound), float(maxBound)
+            boundDict[solver] = (minBound, maxBound)
+            turbFileDict[solver] = turbFile
+
+        dumpDict(boundDict, f"{outdir}/{type}Bounds.pkl")
 
     print(f"{datasetName} bounds:", boundDict)
 
@@ -154,11 +123,11 @@ def makePlots(simDirList, type, stream_var, r, stf, lf, outdir, cbar_type, flash
         eTot = e[time==snapshotTime][0]
         
         plotFile = plotFileDict[solver]
-        cmd = f'python3 {flashplotlib_path} -i {plotFile} -d {datasetName} -verbose 2 -outtype pdf -outdir {outdir} -outname {solver}-{type} -direction z -ncpu 1 -colorbar 0 -vmin {vMin} -vmax {vMax} -axes_label "{X_LABEL_DICT[solver]}" "{Y_LABEL_DICT[solver]}" "" -axes_unit "" "" "" -plotlabel {solver} -time_unit "\$t_\mathrm{{turb}}\$" -time_scale {getTurnOverTime(velocity)} -axes_format {X_TICK_DICT[solver]} {Y_TICK_DICT[solver]} -data_transform q/{eTot} -cmap {cbar_type} {streamStr}'
+        cmd = f'python3 {PYTHON_PATH}/flashplotlib.py -i {plotFile} -d {datasetName} -verbose 2 -outtype pdf -outdir {outdir} -outname {solver}-{type} -direction z -ncpu 1 -colorbar 0 -vmin {vMin} -vmax {vMax} -axes_label "{X_LABEL_DICT[solver]}" "{Y_LABEL_DICT[solver]}" "" -axes_unit "" "" "" -plotlabel {solver} -time_unit "\$t_\mathrm{{turb}}\$" -time_scale {getTurnOverTime(velocity)} -axes_format {X_TICK_DICT[solver]} {Y_TICK_DICT[solver]} -data_transform q/{eTot} -cmap {cbar_type} {streamStr}'
         os.system(cmd)
 
     print("Making colorbars")
-    cbarCmd = f'python3 {flashplotlib_path} -i {simDirList[0]}/Turb_hdf5_plt_cnt_0000 -d dens -verbose 2 -outtype pdf -outdir {outdir} -outname {type}Bar -ncpu 1 -colorbar only -vmin {vMin} -vmax {vMax} -cmap_label "\$E_\mathrm{{{type}}}/E_\mathrm{{{type};total}}\$ (Projection length \$z=L\$)" -doubleHeight 1 -cmap {cbar_type}'
+    cbarCmd = f'python3 {PYTHON_PATH}/flashplotlib.py -i {simDirList[0]}/Turb_hdf5_plt_cnt_0000 -d dens -verbose 2 -outtype pdf -outdir {outdir} -outname {type}Bar -ncpu 1 -colorbar only -vmin {vMin} -vmax {vMax} -cmap_label "\$E_\mathrm{{{type}}}/E_\mathrm{{{type};total}}\$ (Projection length \$z=L\$)" -doubleHeight 1 -cmap {cbar_type}'
     os.system(cbarCmd)
 
 
@@ -198,50 +167,33 @@ def main(args):
     outdir = args.o
 
     if args.kin:
-        makePlots(simList, "kin", args.kin_stream, args.r, args.stf, args.lf, outdir, args.cbar_type, args.flashplotlib_path)
+        makePlots(simList, "kin", args.kin_stream, args.r, args.stf, args.lf, outdir, args.cbar_type)
         if args.table:
             makeTable(simList, outdir, "kin")
     if args.mag:
-        makePlots(simList, "mag", args.mag_stream, args.r, args.stf, args.lf, outdir, args.cbar_type, args.flashplotlib_path)
+        makePlots(simList, "mag", args.mag_stream, args.r, args.stf, args.lf, outdir, args.cbar_type)
         if args.table:
             makeTable(simList, outdir, "mag")
-    
 
-def parseArgs(args):
-    numSim = 1
-    for key, value in vars(args).items():
-        if key not in commonKeys:
-            if value is not None and len(value) > 1:
-                numSim = len(value)
-                break
-            
-    for key, value in vars(args).items():
-        if key not in commonKeys:
-            if value is None:
-                setattr(args, key, [None for i in range(numSim)])
-            elif len(value) == 1:
-                setattr(args, key, [value[0] for i in range(numSim)])
-    return args
-
-
-commonKeys = ["r", "flashplotlib_path", "o", "kin", "mag", "cbar_type", "kin_stream", "mag_stream", "table"]
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Automate production grade plots")
     parser.add_argument("-i", type=str, nargs="*", help="Input Directories")
     parser.add_argument("-o", type=str, default="./", help="Output Directory")
     parser.add_argument("-r", type=float, default=1e-5, help="Energy ratio for projections")
-    parser.add_argument("-stf", type=float, nargs="*", help="Start time for looking for ratio")
-    parser.add_argument("-lf", type=float, nargs="*", help="Lower bound for looking for ratio")
+    parser.add_argument("-stf", type=float, nargs="*", default=[5.0], help="Start time for looking for ratio")
+    parser.add_argument("-lf", type=float, nargs="*", default=[1e-7], help="Lower bound for looking for ratio")
     parser.add_argument("-kin", action='store_true', help="Plot kinetic energy")
     parser.add_argument("-mag", action='store_true', help="Plot magnetic energy")
     parser.add_argument("-table", action='store_true', help="Want the plots to be arranged in a table")
     parser.add_argument("-cbar_type", type=str, default="magma", help="Colorbar type")
     parser.add_argument("-kin_stream", type=str, default=None, choices=['vel', 'mag'], help="Streamline on kinetic energy")
     parser.add_argument("-mag_stream", type=str, default=None, choices=['vel', 'mag'], help="Streamline on magnetic energy")
-    parser.add_argument("-flashplotlib_path", type=str, default="/home/100/jw5893/flash-tools/python/flashplotlib.py", help="Path to flashplotlib")
+    parser.add_argument("-redo", action='store_true', help="Redo the bounds calculation")
 
-    args = parseArgs(parser.parse_args())
+    commonKeys = ["r", "o", "kin", "mag", "cbar_type", "kin_stream", "mag_stream", "table", "redo"]
+
+    args = parseArgs(parser.parse_args(), commonKeys)
     print(args)
 
     main(args)
