@@ -146,7 +146,7 @@ def createInfoDumpFile(args):
 def createFlashPar(args):
     turnOverTime = 1 / (2 * args.v)
     tmax = args.nt * turnOverTime
-    checkpointFileIntervalTime = turnOverTime
+    checkpointFileIntervalTime = args.dt * turnOverTime
     plotFileIntervalTime = args.dt * turnOverTime
 
     flashParFile = open(utils.argsToOutdirName(args) + "/flash.par", "w")
