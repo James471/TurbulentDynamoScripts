@@ -101,7 +101,7 @@ def main(args):
     \\renewcommand{{\\arraystretch}}{{1.5}}
     \\begin{{tabular}}{{ccccccccc}}
     \\hline
-    Name & $\\tau(t_\\mathrm{{turb}}^{{-1}})$ & $(E_\\mathrm{{M  }}/E_\\mathrm{{K}})_\\mathrm{{sat}}$ & $p_\\mathrm{{bn}}$ & $k_\\mathrm{{bn}}$ & ${{k}}_\\mathrm{{\\nu}}$ & $k_\\mathrm{{\\eta}}$\\\\
+    Name & $\\Gamma(t_\\mathrm{{turb}}^{{-1}})$ & $(E_\\mathrm{{M  }}/E_\\mathrm{{K}})_\\mathrm{{sat}}$ & $p_\\mathrm{{bn}}$ & $k_\\mathrm{{bn}}$ & ${{k}}_\\mathrm{{\\nu}}$ & $k_\\mathrm{{\\eta}}$\\\\
     (1) & (2) & (3) & (4) & (5) & (6) & (7)\\\\
     \\hline
     {table1Data}
