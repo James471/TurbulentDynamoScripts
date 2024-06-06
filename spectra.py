@@ -180,7 +180,7 @@ def plotSpectra(simDir, verbose, spectType, fact, infoDict, params, outdir, comp
     else:
         if spectType == "mags":
             fitDict = loadDict(f"{outdir}/magFitDict.pkl")[infoDict['solver']]
-            cfp.plot(compensateFitFact * fact * 10**Log10_P_mag(kFit, *(fitDict["A_mag"][0], fitDict["p_mag"][0], fitDict["p_eta"][0], fitDict["k_tilde_eta"][0])), kFit, color="black")
+            # cfp.plot(compensateFitFact * fact * 10**Log10_P_mag(kFit, *(fitDict["A_mag"][0], fitDict["p_mag"][0], fitDict["p_eta"][0], fitDict["k_tilde_eta"][0])), kFit, color="black")
         elif spectType == "vels":
             fitDict = loadDict(f"{outdir}/kinFitDict.pkl")[infoDict['solver']]
             cfp.plot(compensateFitFact * fact * 10**Log10_P_kin(kFit, *(fitDict["A_kin"][0], fitDict["p_bn"][0], fitDict["k_bn"][0], fitDict["k_nu"][0])), kFit, color="black")
@@ -195,13 +195,13 @@ def fit_func(spectType, simDir, kFit, log10PTotFit, deltaLog10PTotFit, params, c
 
     if spectType == "mags":
         if verbose: print("Fitting for:", infoDict['solver'])
-        magFit = cfp.fit(Log10_P_mag, kFit, log10PTotFit, xerr=None, yerr=deltaLog10PTotFit,
-                            params=params, max_nfev=100000, n_random_draws=10000)
-        cfp.plot(compensateFitFact * fact * 10**Log10_P_mag(kFit, *(magFit.popt)), kFit, color="black")
-        fitDict["A_mag"] = (magFit.popt[0], magFit.perr[0][0], magFit.perr[0][1])
-        fitDict["p_mag"] = (magFit.popt[1], magFit.perr[1][0], magFit.perr[1][1])
-        fitDict["p_eta"] = (magFit.popt[2], magFit.perr[2][0], magFit.perr[2][1])
-        fitDict["k_tilde_eta"] = (magFit.popt[3], magFit.perr[3][0], magFit.perr[3][1])
+        # magFit = cfp.fit(Log10_P_mag, kFit, log10PTotFit, xerr=None, yerr=deltaLog10PTotFit,
+                            # params=params, max_nfev=100000, n_random_draws=1000)
+        # cfp.plot(compensateFitFact * fact * 10**Log10_P_mag(kFit, *(magFit.popt)), kFit, color="black")
+        fitDict["A_mag"] = (0,0,0)
+        fitDict["p_mag"] = (0,0,0)
+        fitDict["p_eta"] = (0,0,0)
+        fitDict["k_tilde_eta"] = (0,0,0)
 
     elif spectType == "cur":
         if verbose: print("Working with:", infoDict['solver'])
@@ -247,7 +247,8 @@ def postPlot(plObj, spectType, compensated=False):
     ax.set_yscale('log')
     if spectType == "mags":
         ax.set_ylabel(r'$P_\mathrm{mag}$')
-        ax.set_xlabel(r'$k$')
+        ax.get_xaxis().set_ticks([])
+        # ax.set_xlabel(r'$k$')
         # ax.legend(loc='best')
     elif spectType == "vels":
         if compensated:
@@ -265,13 +266,15 @@ def plotScaleLoc(plObj, solverFit, type):
     ax = plObj.gca()
     ylim = ax.get_ylim()
     if type == "mags":
-        maxKEta = 0
-        for solver in solverFit:
-            val = solverFit[solver]
-            ax.plot([val["k_tilde_eta"][0]**(1/val["p_eta"][0]), val["k_tilde_eta"][0]**(1/val["p_eta"][0])], [ylim[0], 2*ylim[0]], color=COLOR_DICT[solver], scaley=False)
-            if val["k_tilde_eta"][0]**(1/val["p_eta"][0]) > maxKEta:
-                maxKEta = val["k_tilde_eta"][0]**(1/val["p_eta"][0])
-        ax.text(maxKEta, 2.5*ylim[0], r"$k_\eta$", color="black")
+        ax.plot([10, 10], [ylim[0], 2*ylim[0]], color="white", scaley=False)
+        ax.text(10, 2.5*ylim[0], r"$k_\nu$", color="white")
+        # maxKEta = 0
+        # for solver in solverFit:
+        #     val = solverFit[solver]
+        #     ax.plot([val["k_tilde_eta"][0]**(1/val["p_eta"][0]), val["k_tilde_eta"][0]**(1/val["p_eta"][0])], [ylim[0], 2*ylim[0]], color=COLOR_DICT[solver], scaley=False)
+        #     if val["k_tilde_eta"][0]**(1/val["p_eta"][0]) > maxKEta:
+        #         maxKEta = val["k_tilde_eta"][0]**(1/val["p_eta"][0])
+        # ax.text(maxKEta, 2.5*ylim[0], r"$k_\eta$", color="black")
     elif type == "vels":
         maxKNu = 0
         for solver in solverFit:
