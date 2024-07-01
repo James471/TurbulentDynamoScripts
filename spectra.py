@@ -232,7 +232,7 @@ def fit_func(spectType, simDir, kFit, log10PTotFit, deltaLog10PTotFit, params, c
 
     elif spectType == "vels":
         if verbose: print("Fitting for:", infoDict['solver'])
-        kinFit = cfp.fit(Log10_P_kin, kFit, log10PTotFit, xerr=None, yerr=deltaLog10PTotFit, params=params, n_random_draws=10000)
+        kinFit = cfp.fit(Log10_P_kin, kFit, log10PTotFit, xerr=None, yerr=deltaLog10PTotFit, params=params, n_random_draws=1000)
         cfp.plot(fact * 10**Log10_P_kin(kFit, *(kinFit.popt)) * compensateFitFact, kFit, color="black")
         fitDict["A_kin"] = (kinFit.popt[0], kinFit.perr[0][0], kinFit.perr[0][1])
         fitDict["p_bn"] = (kinFit.popt[1], kinFit.perr[1][0], kinFit.perr[1][1])
@@ -315,7 +315,7 @@ def main(args):
             fit = True
             if not args.refit and os.path.exists(f"{args.o}/kinFitDict.pkl"):
                 fit = False
-            kinParams = {"A_kin": [0, 0.0015, np.inf], "p_bn": [0, 1, np.inf], "k_bn": [0, 4.0, 128], "k_tilde_nu": [0, 4.0, 128]}
+            kinParams = {"A_kin": [0, 0.0015, np.inf], "p_bn": [0, 1, np.inf], "k_bn": [0.1, 4.0, 128], "k_tilde_nu": [0.1, 4.0, 128]}
             plKinObj, fitDict = plotSpectra(simDir, 1, "vels", fact, infoDict, kinParams, args.o, compensate=args.compensate, fit=fit)
             solverKinFit[infoDict['solver']] = fitDict
             postPlot(plKinObj, "vels", args.compensate)
