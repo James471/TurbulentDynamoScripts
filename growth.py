@@ -97,6 +97,7 @@ def main(args):
         velocity = infoDict["v"]
         label = SOLVER_DICT[infoDict["solver"]]
         color = COLOR_DICT[infoDict["solver"]]
+        n = 10
         if infoDict["solver"] == "usm-bk":
             n = 1000
         fit = addPlot(axMach, axRatio, loadFile(file + "/Turb.dat", args.sr[index], n), label, color, args.lf[index], 
