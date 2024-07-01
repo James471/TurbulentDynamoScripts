@@ -1,6 +1,7 @@
 from constants import *
 import numpy as np
 import pickle
+import itertools
 
 def getTurnOverTime(v):
     return 1/(2*v)
@@ -31,8 +32,13 @@ def getEMagOverEKin(f):
     return (getEMag(f) / getEKin(f)).flatten()
 
 
-def loadFile(path, shift=0):
-    return np.loadtxt(path, unpack=True, skiprows=shift)
+def loadFile(path, shift=0, n=1):
+    if n == 1:
+        return np.loadtxt(path, unpack=True, skiprows=shift)
+    else:
+        with open(path, "r") as f:
+            iterator = itertools.islice(f, shift, None, n)
+            return np.loadtxt(iterator, unpack=True)
 
 
 def getInfoDict(dirPath):

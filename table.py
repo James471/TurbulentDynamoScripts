@@ -4,7 +4,7 @@ import argparse
 from constants import SOLVER_DICT
 from utils import loadDict
 from decimal import Decimal
-
+from ipdb import set_trace as stop
 
 def getNum(num):
     return float((f"{Decimal(num):.1E}").split("E")[0])
@@ -36,6 +36,8 @@ def main(args):
     growthDict   = loadDict(f"{args.i}/growthDict.pkl")
 
     for solver in solverList:
+        if solver not in solverKinFit or solver not in solverCurFit:
+            continue
         kinFit = solverKinFit[solver]
         curFit = solverCurFit[solver]
         

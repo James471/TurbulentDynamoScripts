@@ -6,6 +6,8 @@ import subprocess
 import os
 import re
 import sys
+import h5py
+from ipdb import set_trace as stop
 
 from myconfig import *
 from datautils import *
@@ -30,13 +32,24 @@ Y_TICK_DICT = {"Split-Roe": None, "Split-Bouchut": "\"\"", "USM-Roe": "\"\"",
 
 
 
-def getPlotFileNumber(turbFile, velocity, r, stf, lf, dt):
+def getPlotFileNumber(turbFile, velocity, r, stf, lf, simDir):
     t = getNonDimensionalTime(turbFile, velocity)
     ratio = getEMagOverEKin(turbFile)
     transientMask = (t > stf) & (ratio > lf)
     location = np.argmin(np.abs(ratio[transientMask] - r))
     snapshotTime = t[transientMask][location]
-    plotFileNumber = int(round(snapshotTime / dt))
+
+    plotFileList = [f for f in os.listdir(simDir) if f.startswith("Turb_hdf5_plt_cnt_")]
+    plotFileList.sort()
+    timeList = []
+    for plotFile in plotFileList:
+        with h5py.File(simDir + "/" + plotFile) as f:
+            dataset = f['real scalars']
+            time = dataset[dataset['name']=='time']['value']
+        timeList.append(time)
+    
+    timeList = np.array(timeList)
+    plotFileNumber = int(str(plotFileList[np.argmin(np.abs(timeList - snapshotTime))])[-4:])
 
     print(f"Snapshot Time: {snapshotTime}t_turb")
 
@@ -64,15 +77,18 @@ def makePlots(simDirList, type, stream_var, r, stf, lf, outdir, cbar_type, redo,
             infoDict = getInfoDict(simDir)
             velocity = infoDict["v"]
             solver = SOLVER_DICT[infoDict["solver"]]
-            dt = infoDict["dt"]
 
             print(f"Processing for {solver}")
 
             print("Loading Turb.dat")
-            turbFile = loadFile(simDir + "/Turb.dat", 10)
+            if solver == "USM-BK":
+                n = 5000
+            else:
+                n = 10
+            turbFile = loadFile(simDir + "/Turb.dat", 10, n)
             print("Loaded Turb.dat")
 
-            plotFileNumber = getPlotFileNumber(turbFile, velocity, r, stf[index], lf[index], dt)
+            plotFileNumber = getPlotFileNumber(turbFile, velocity, r, stf[index], lf[index], simDir)
             plotFile = simDir + "/Turb_hdf5_plt_cnt_" + str(plotFileNumber).zfill(4)
             plotFileDict[solver] = plotFile
 
@@ -81,7 +97,8 @@ def makePlots(simDirList, type, stream_var, r, stf, lf, outdir, cbar_type, redo,
 
             time = turbFile[TIME_COLUMN_INDEX]
             e = turbFile[E_MAG_COLUMN_INDEX]
-            eTot = e[time==snapshotTime][0]
+            eTot = e[np.argmin(np.abs(time - snapshotTime))]
+            print(f"Min time is {(time-snapshotTime)[np.argmin(np.abs(time-snapshotTime))]}")
 
             cmd = f'python3 {PYTHON_PATH}/flashplotlib.py -i {plotFile} -d {datasetName} -fontsize {fontsize} -verbose 2 -outtype pdf -outdir {outdir} -outname {solver}-{type} -direction z -ncpu 1 -colorbar 0 -data_transform q/{eTot}'
             output = subprocess.check_output(cmd, shell=True).decode('utf-8')
@@ -92,6 +109,7 @@ def makePlots(simDirList, type, stream_var, r, stf, lf, outdir, cbar_type, redo,
             minBound, maxBound = boundString.split(",")
             minBound, maxBound = float(minBound), float(maxBound)
             boundDict[solver] = (minBound, maxBound)
+            print(f"Bounds acquired for {solver}")
 
         dumpDict(boundDict, f"{outdir}/{type}Bounds.pkl")
         dumpDict(plotFileDict, f"{outdir}/plotFiles.pkl")

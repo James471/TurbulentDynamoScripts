@@ -97,7 +97,9 @@ def main(args):
         velocity = infoDict["v"]
         label = SOLVER_DICT[infoDict["solver"]]
         color = COLOR_DICT[infoDict["solver"]]
-        fit = addPlot(axMach, axRatio, loadFile(file + "/Turb.dat", args.sr[index]), label, color, args.lf[index], 
+        if infoDict["solver"] == "usm-bk":
+            n = 1000
+        fit = addPlot(axMach, axRatio, loadFile(file + "/Turb.dat", args.sr[index], n), label, color, args.lf[index], 
                       args.uf[index], velocity, args.stf[index], args.sbs[index], fitMethod, 
                       fitParam=fitDict[infoDict["solver"]])
         fitDict[infoDict["solver"]] = fit
@@ -127,7 +129,7 @@ if __name__ == "__main__":
     parser.add_argument("-sr", type=int, nargs="*", default=[12000], help="Skip rows")
     parser.add_argument("-stf", type=float, nargs="*", default=[5.0], help="Skip turnover time before fit")
     parser.add_argument("-sbs", type=float, default=[60.0], help="Skip turnover time before measuring saturation")
-    parser.add_argument("-ld", type=float, default=1e-8, help="Low bound to display")
+    parser.add_argument("-ld", type=float, nargs="?", default=1e-8, help="Low bound to display")
     parser.add_argument("-ud", type=float, default=5e0, help="Upper bound to display")
     parser.add_argument("-fit", type=str, default="syst", help="Fit method to use")
     parser.add_argument("-refit", action="store_true", help="Refit the data")

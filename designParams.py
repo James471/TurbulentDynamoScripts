@@ -40,3 +40,5 @@ rcParams['figure.figsize'] = (8.0, 5.0)
 rcParams['figure.dpi'] = 150
 rcParams['savefig.dpi'] = 200
 rcParams['savefig.bbox'] = 'tight'
+# errorbars
+rcParams['errorbar.capsize'] = 1.5
