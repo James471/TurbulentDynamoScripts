@@ -162,8 +162,8 @@ def plotSpectra(simDir, verbose, spectType, fact, infoDict, params, outdir, comp
     deltaLog10PTotFit = np.array(deltaLog10PTot[(k >= kFitMin) & (k <= kFitMax)].tolist())
 
     if compensate and spectType == "vels":
-        compensateFact = k**2
-        compensateFitFact = kFit**2
+        compensateFact = k**1.7
+        compensateFitFact = kFit**1.7
 
     else:
         compensateFact = 1
