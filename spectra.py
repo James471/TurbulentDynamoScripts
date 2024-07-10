@@ -252,7 +252,7 @@ def postPlot(plObj, spectType, compensated=False):
         # ax.legend(loc='best')
     elif spectType == "vels":
         if compensated:
-            ax.set_ylabel(r'$k^2P_\mathrm{kin}$')
+            ax.set_ylabel(r'$k^1.7P_\mathrm{kin}$')
         else:
             ax.set_ylabel(r'$P_\mathrm{kin}$')
         ax.get_xaxis().set_ticks([])
@@ -324,7 +324,10 @@ def main(args):
             postPlot(plKinObj, "vels", args.compensate)
         dumpDict(solverKinFit, f"{args.o}/kinFitDict.pkl")
         plotScaleLoc(plKinObj, solverKinFit, "vels")
-        plKinObj.savefig("Kinetic Spectra.pdf")
+        if args.compensate:
+            plKinObj.savefig("Compensated Kinetic Spectra.pdf")
+        else:
+            plKinObj.savefig("Kinetic Spectra.pdf")
         plKinObj.clf(); plKinObj.cla(); plKinObj.close(); plKinObj = None
 
     
