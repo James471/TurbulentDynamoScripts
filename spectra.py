@@ -41,9 +41,8 @@ def Rm_fun(k_tilde_nu, c_nu, k_tilde_eta, p_eta, c_eta):
     return Pm * Re_fun(k_tilde_nu, c_nu)
 
 
-def Log10_P_kin(k, A_kin, p_bn, k_bn, k_tilde_nu):
+def Log10_P_kin(k, A_kin, p_bn, k_bn, k_tilde_nu, p_nu):
     p_kin = -1.7
-    p_nu  = 1.0
     return np.log10(A_kin * ((k / k_bn)**p_kin + (k / k_bn)**p_bn) * np.exp(-(k / k_tilde_nu)**p_nu))
 
 
@@ -183,7 +182,7 @@ def plotSpectra(simDir, verbose, spectType, fact, infoDict, params, outdir, comp
             # cfp.plot(compensateFitFact * fact * 10**Log10_P_mag(kFit, *(fitDict["A_mag"][0], fitDict["p_mag"][0], fitDict["p_eta"][0], fitDict["k_tilde_eta"][0])), kFit, color="black")
         elif spectType == "vels":
             fitDict = loadDict(f"{outdir}/kinFitDict.pkl")[infoDict['solver']]
-            cfp.plot(compensateFitFact * fact * 10**Log10_P_kin(kFit, *(fitDict["A_kin"][0], fitDict["p_bn"][0], fitDict["k_bn"][0], fitDict["k_nu"][0])), kFit, color="black")
+            cfp.plot(compensateFitFact * fact * 10**Log10_P_kin(kFit, *(fitDict["A_kin"][0], fitDict["p_bn"][0], fitDict["k_bn"][0], fitDict["k_nu"][0]), fitDict["p_nu"][0]), kFit, color="black")
         elif spectType == "cur":
             fitDict = loadDict(f"{outdir}/curFitDict.pkl")[infoDict['solver']]
 
@@ -238,6 +237,7 @@ def fit_func(spectType, simDir, kFit, log10PTotFit, deltaLog10PTotFit, params, c
         fitDict["p_bn"] = (kinFit.popt[1], kinFit.perr[1][0], kinFit.perr[1][1])
         fitDict["k_bn"] = (kinFit.popt[2], kinFit.perr[2][0], kinFit.perr[2][1])
         fitDict["k_nu"] = (kinFit.popt[3], kinFit.perr[3][0], kinFit.perr[3][1])
+        fitDict["p_nu"] = (kinFit.popt[4], kinFit.perr[4][0], kinFit.perr[4][1])
     
     return fitDict
 
@@ -318,7 +318,9 @@ def main(args):
             fit = True
             if not args.refit and os.path.exists(f"{args.o}/kinFitDict.pkl"):
                 fit = False
-            kinParams = {"A_kin": [0, 0.0015, np.inf], "p_bn": [0, 1, np.inf], "k_bn": [0.1, 4.0, 128], "k_tilde_nu": [0.1, 4.0, 128]}
+            kinParams = {"A_kin": [0, 0.0015, np.inf], "p_bn": [0, 1, np.inf], "k_bn": [0.1, 4.0, 128], "k_tilde_nu": [0.1, 4.0, 128], "p_nu": [1, 1, 1+1e-15]}
+            if os.path.exists(simDir+"/spectra/kinFitInit.txt"):
+                kinParams = txtToCfpDict(simDir+"/spectra/kinFitInit.txt")
             plKinObj, fitDict = plotSpectra(simDir, 1, "vels", fact, infoDict, kinParams, args.o, compensate=args.compensate, fit=fit)
             solverKinFit[infoDict['solver']] = fitDict
             postPlot(plKinObj, "vels", args.compensate)
@@ -342,6 +344,7 @@ def main(args):
             fit = True
             if not args.refit and os.path.exists(f"{args.o}/magFitDict.pkl"):
                 fit = False
+            # Mag fit has been disabled for now
             magParams = {"A_mag": [0, 0.0001, np.inf], "p_mag": [0, 1, np.inf], "p_eta": [0, 1, np.inf], "k_tilde_eta": [0, 4.0, 128]}
             plMagObj, fitDict = plotSpectra(simDir, 1, "mags", fact, infoDict, magParams, args.o, compensate=False, fit=fit)
             solverMagFit[infoDict['solver']] = fitDict

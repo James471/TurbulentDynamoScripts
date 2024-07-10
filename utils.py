@@ -15,6 +15,27 @@ def getSolverSortedList(pathList):
     srt = np.argsort(np.array(order))
     return [cleanPathList[i] for i in srt]
 
+def txtToCfpDict(path):
+    with open(path, "r") as f:
+        lines = f.readlines()
+    cfpDict = {}
+    for line in lines:
+        key = str(line.split(":")[0])
+        temp = line.split(":")[1].split(",")
+        if line == "":
+            continue
+        values = []
+        for i in temp:
+            if i == "inf":
+                value = np.inf
+            elif i == "-inf":
+                value = -np.inf
+            else:
+                value = float(i)
+            values.append(value)
+        cfpDict[key] = values
+    return cfpDict
+
 
 def dumpDict(dictionary, filename):
     with open(filename, "wb") as f:
