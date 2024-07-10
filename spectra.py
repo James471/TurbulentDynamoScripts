@@ -311,7 +311,10 @@ def main(args):
         solverKinFit = {}
         for simDir in simList:
             infoDict = getInfoDict(simDir)
-            fact = FACT_DICT[infoDict['solver']]
+            if args.no_shift:
+                fact = 1
+            else:
+                fact = FACT_DICT[infoDict['solver']]
             fit = True
             if not args.refit and os.path.exists(f"{args.o}/kinFitDict.pkl"):
                 fit = False
@@ -329,7 +332,10 @@ def main(args):
         solverMagFit = {}
         for simDir in simList:
             infoDict = getInfoDict(simDir)
-            fact = FACT_DICT[infoDict['solver']]
+            if args.no_shift:
+                fact = 1
+            else:
+                fact = FACT_DICT[infoDict['solver']]
             fit = True
             if not args.refit and os.path.exists(f"{args.o}/magFitDict.pkl"):
                 fit = False
@@ -346,7 +352,10 @@ def main(args):
         solverCurFit = {}
         for simDir in simList:
             infoDict = getInfoDict(simDir)
-            fact = FACT_DICT[infoDict['solver']]
+            if args.no_shift:
+                fact = 1
+            else:
+                fact = FACT_DICT[infoDict['solver']]
             fit = True
             if not args.refit and os.path.exists(f"{args.o}/curFitDict.pkl"):
                 fit = False
@@ -368,7 +377,7 @@ if __name__ == "__main__":
     parser.add_argument("-cur_spect", action="store_true", help="Generate current spectra")
     parser.add_argument("-mag_spect", action="store_true", help="Generate magnetic spectra")
     parser.add_argument("-kin_plot", action="store_true", help="Plot kinetic spectra")
-    parser.add_argument("-compensate", action="store_true", help="Compensate for k^2. Valid only for the kinetic spectra.")
+    parser.add_argument("-compensate", action="store_true", help="Compensate for k^1.7. Works only for the kinetic spectra.")
     parser.add_argument("-cur_plot", action="store_true", help="Plot current spectra")
     parser.add_argument("-mag_plot", action="store_true", help="Plot magnetic spectra")
     parser.add_argument("-v", type=int, default=0, help="Verbose")
@@ -376,9 +385,10 @@ if __name__ == "__main__":
     parser.add_argument("-uf", type=float, default=1e-3, help="Upper bound for kinematic phase")
     parser.add_argument("-stf", type=float, default=5.0, help="Start time for kinematic phase")
     parser.add_argument("-n", type=int, default=1, help="Number of processors for spectra generation")
-    parser.add_argument("-refit", action="store_true", help="Refit the spectra")
+    parser.add_argument("-refit", action="store_true", help="Refit the spectra even if a fit file is present")
+    parser.add_argument("-no_shift", action="store_true", help="Do not shift the spectra for different solvers")
 
-    commonKeys = ["n", "o", "v", "mag_spect", "kin_spect", "cur_spect", "mag_plot", "kin_plot", "cur_plot", "legend", "lf", "uf", "stf", "refit", "compensate"]
+    commonKeys = ["n", "o", "v", "mag_spect", "kin_spect", "cur_spect", "mag_plot", "kin_plot", "cur_plot", "legend", "lf", "uf", "stf", "refit", "compensate", "no_shift"]
 
     args = parseArgs(parser.parse_args(), commonKeys)
     print(args)

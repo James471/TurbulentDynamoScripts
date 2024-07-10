@@ -33,6 +33,7 @@ def getEMagOverEKin(f):
 
 
 def loadFile(path, shift=0, n=1):
+    #Loads every nth row
     if n == 1:
         return np.loadtxt(path, unpack=True, skiprows=shift)
     else:
