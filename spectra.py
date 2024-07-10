@@ -321,6 +321,7 @@ def main(args):
             kinParams = {"A_kin": [0, 0.0015, np.inf], "p_bn": [0, 1, np.inf], "k_bn": [0.1, 4.0, 128], "k_tilde_nu": [0.1, 4.0, 128], "p_nu": [1, 1, 1+1e-15]}
             if os.path.exists(simDir+"/spectra/kinFitInit.txt"):
                 kinParams = txtToCfpDict(simDir+"/spectra/kinFitInit.txt")
+                print("Using kin dict:", kinParams)
             plKinObj, fitDict = plotSpectra(simDir, 1, "vels", fact, infoDict, kinParams, args.o, compensate=args.compensate, fit=fit)
             solverKinFit[infoDict['solver']] = fitDict
             postPlot(plKinObj, "vels", args.compensate)

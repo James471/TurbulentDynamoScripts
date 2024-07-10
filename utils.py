@@ -26,6 +26,7 @@ def txtToCfpDict(path):
             continue
         values = []
         for i in temp:
+            i = i.strip()
             if i == "inf":
                 value = np.inf
             elif i == "-inf":
