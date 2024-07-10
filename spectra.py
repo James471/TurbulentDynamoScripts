@@ -194,7 +194,7 @@ def plotSpectra(simDir, verbose, spectType, fact, infoDict, params, outdir, comp
 def fit_func(spectType, simDir, kFit, log10PTotFit, deltaLog10PTotFit, params, compensateFitFact, fact, fitDict, verbose, infoDict):
 
     if spectType == "mags":
-        if verbose: print("Fitting for:", infoDict['solver'])
+        # if verbose: print("Mag Spectra-> Fitting for:", infoDict['solver'])
         # magFit = cfp.fit(Log10_P_mag, kFit, log10PTotFit, xerr=None, yerr=deltaLog10PTotFit,
                             # params=params, max_nfev=100000, n_random_draws=1000)
         # cfp.plot(compensateFitFact * fact * 10**Log10_P_mag(kFit, *(magFit.popt)), kFit, color="black")
@@ -204,7 +204,7 @@ def fit_func(spectType, simDir, kFit, log10PTotFit, deltaLog10PTotFit, params, c
         fitDict["k_tilde_eta"] = (0,0,0)
 
     elif spectType == "cur":
-        if verbose: print("Working with:", infoDict['solver'])
+        if verbose: print("Current Spectra-> Working with:", infoDict['solver'])
         infoDict = getInfoDict(simDir)
         spectraDir = simDir+"/spectra"
         kList = []
@@ -231,7 +231,7 @@ def fit_func(spectType, simDir, kFit, log10PTotFit, deltaLog10PTotFit, params, c
         # plCurObj.plot([k_nu_23, k_nu_23], [ylim[0], 2e-10], color=colorDict[infoDict['solver']], scaley=False)
 
     elif spectType == "vels":
-        if verbose: print("Fitting for:", infoDict['solver'])
+        if verbose: print("Kin Spectra-> Fitting for:", infoDict['solver'])
         kinFit = cfp.fit(Log10_P_kin, kFit, log10PTotFit, xerr=None, yerr=deltaLog10PTotFit, params=params, n_random_draws=1000)
         cfp.plot(fact * 10**Log10_P_kin(kFit, *(kinFit.popt)) * compensateFitFact, kFit, color="black")
         fitDict["A_kin"] = (kinFit.popt[0], kinFit.perr[0][0], kinFit.perr[0][1])

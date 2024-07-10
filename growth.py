@@ -129,7 +129,7 @@ if __name__ == "__main__":
     parser.add_argument("-uf", type=float, nargs="*", default=[1e-3], help="Upper bound for fit")
     parser.add_argument("-sr", type=int, nargs="*", default=[12000], help="Skip rows")
     parser.add_argument("-stf", type=float, nargs="*", default=[5.0], help="Skip turnover time before fit")
-    parser.add_argument("-sbs", type=float, default=[60.0], help="Skip turnover time before measuring saturation")
+    parser.add_argument("-sbs", type=float, nargs="*", default=[60.0], help="Skip turnover time before measuring saturation")
     parser.add_argument("-ld", type=float, nargs="?", default=1e-8, help="Low bound to display")
     parser.add_argument("-ud", type=float, default=5e0, help="Upper bound to display")
     parser.add_argument("-fit", type=str, default="syst", help="Fit method to use")

@@ -8,15 +8,18 @@ def main(args):
 
     scriptDir = pathlib.Path(__file__).parent.resolve()
 
-    pathList = [args.i+_ for _ in args.i]
+    pathList = [args.i+_ for _ in os.listdir(args.i)]
     simList = utils.getSolverSortedList(pathList)
-    sims = simList.join(" ")
+    sims = " ".join(simList)
 
     if not args.no_growth:
         refit = ""
         if args.redo:
             refit = "-refit"
-        cmd = f"python3 {scriptDir}/growth.py -i {sims} -o {args.o} -lf {args.lf} -uf {args.uf} -stf {args.stf} -sr {args.sr} -sbs {args.sbs} -ld {args.ld} -ud {args.ud} -fit {args.fit} {refit}"
+        ld = f"-ld {args.ld}"
+        if args.ld is None:
+            ld = ""
+        cmd = f"python3 {scriptDir}/growth.py -i {sims} -o {args.o} -lf {args.lf} -uf {args.uf} -stf {args.stf} -sr {args.sr} -sbs {args.sbs} {ld} -ud {args.ud} -fit {args.fit} {refit}"
         print("Generating growth plots")
         print("Running:", cmd)
         os.system(cmd)
@@ -37,13 +40,13 @@ def main(args):
         refit = ""
         if args.redo:
             refit = "-refit"
-        cmd = f"python3 {scriptDir}/spectra.py -i {sim} -o {args.o} -kin_plot -mag_plot -cur_plot -lf {args.lf} -uf {args.uf} -stf {args.stf} {shift} {refit}"
+        cmd = f"python3 {scriptDir}/spectra.py -i {sims} -o {args.o} -kin_plot -mag_plot -cur_plot -lf {args.lf} -uf {args.uf} -stf {args.stf} {shift} {refit}"
         print("Generating spectra plots")
         print("Running:", cmd)
         os.system(cmd)
 
-    if not args.no_snapshot:
-        pass
+    # if not args.no_snapshot:
+    #     pass
 
     if not args.no_table:
         cmd = f"python3 {scriptDir}/table.py -i {args.i}"
@@ -68,8 +71,8 @@ if __name__ == "__main__":
     parser.add_argument("-no_shift", action="store_true", help="Do not shift the spectra for different solvers")    
 
     # Growth plot arguments
-    parser.add_argument("-sr", type=int, nargs="*", default=[12000], help="Skip rows")
-    parser.add_argument("-sbs", type=float, default=[60.0], help="Skip turnover time before measuring saturation")
+    parser.add_argument("-sr", type=int, default=12000, help="Skip rows")
+    parser.add_argument("-sbs", type=float, default=60.0, help="Skip turnover time before measuring saturation")
     parser.add_argument("-ld", type=float, nargs="?", default=1e-8, help="Low bound to display")
     parser.add_argument("-ud", type=float, default=5e0, help="Upper bound to display")
     parser.add_argument("-fit", type=str, default="syst", help="Fit method to use")
