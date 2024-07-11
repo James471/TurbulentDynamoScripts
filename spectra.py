@@ -179,7 +179,7 @@ def plotSpectra(simDir, verbose, spectType, fact, infoDict, params, outdir, comp
             # cfp.plot(compensateFitFact * fact * 10**Log10_P_mag(kFit, *(fitDict["A_mag"][0], fitDict["p_mag"][0], fitDict["p_eta"][0], fitDict["k_tilde_eta"][0])), kFit, color="black")
         elif spectType == "vels":
             fitDict = loadDict(f"{outdir}/kinFitDict.pkl")[infoDict['solver']]
-            cfp.plot(compensateFitFact * fact * 10**Log10_P_kin(kFit, *(fitDict["A_kin"][0], fitDict["p_bn"][0], fitDict["k_bn"][0], fitDict["k_tilde"][0]), fitDict["p_nu"][0]), kFit, color="black")
+            cfp.plot(compensateFitFact * fact * 10**Log10_P_kin(kFit, *(fitDict["A_kin"][0], fitDict["p_bn"][0], fitDict["k_bn"][0], fitDict["k_tilde_nu"][0]), fitDict["p_nu"][0]), kFit, color="black")
         elif spectType == "cur":
             fitDict = loadDict(f"{outdir}/curFitDict.pkl")[infoDict['solver']]
 
