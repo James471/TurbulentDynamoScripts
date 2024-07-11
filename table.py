@@ -42,18 +42,27 @@ def main(args):
         curFit = solverCurFit[solver]
         
         p_kin = -1.7
-        p_nu = 1.0
+        p_nu = kinFit["p_nu"][0]
+        p_nu_pos_er = kinFit["p_nu"][2]
+        p_nu_neg_er = kinFit["p_nu"][1]
+        p_nu_pos = p_nu + p_nu_pos_er
+        p_nu_neg = p_nu + p_nu_neg_er
         p_bn = kinFit["p_bn"][0]
         p_bn_pos_er = kinFit["p_bn"][2]
         p_bn_neg_er = kinFit["p_bn"][1]
         k_bn = kinFit["k_bn"][0]
         k_bn_pos_er = kinFit["k_bn"][2]
         k_bn_neg_er = kinFit["k_bn"][1]
-        k_nu = kinFit["k_nu"][0]
-        k_nu_pos_er = kinFit["k_nu"][2]
-        k_nu_neg_er = kinFit["k_nu"][1]
-        k_nu_pos = k_nu + k_nu_pos_er
-        k_nu_neg = k_nu + k_nu_neg_er
+        k_tilde_nu = kinFit["k_tilde_nu"][0]
+        k_tilde_nu_pos_er = kinFit["k_tilde_nu"][2]
+        k_tilde_nu_neg_er = kinFit["k_tilde_nu"][1]
+        k_tilde_nu_pos = k_tilde_nu + k_tilde_nu_pos_er
+        k_tilde_nu_neg = k_tilde_nu + k_tilde_nu_neg_er
+        k_nu = k_tilde_nu**(1/p_nu)
+        k_nu_pos = max(k_tilde_nu_pos**(1/p_nu_neg), k_tilde_nu_pos**(1/p_nu_pos), k_tilde_nu_neg**(1/p_nu_neg), k_tilde_nu_neg**(1/p_nu_pos))
+        k_nu_neg = min(k_tilde_nu_pos**(1/p_nu_neg), k_tilde_nu_pos**(1/p_nu_pos), k_tilde_nu_neg**(1/p_nu_neg), k_tilde_nu_neg**(1/p_nu_pos))
+        k_nu_pos_er = k_nu_pos - k_nu
+        k_nu_neg_er = k_nu_neg - k_nu
 
         k_eta = curFit["k_eta_23"][0]
         k_eta_pos_er = curFit["k_eta_23"][2]
