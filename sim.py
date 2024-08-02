@@ -5,6 +5,7 @@ import argparse
 import pickle
 import socket
 import textwrap
+import numpy as np
 import utils
 from myconfig import *
 
@@ -178,7 +179,7 @@ def createFlashPar(args):
     rho_ambient          =  1.0
     c_ambient            =  {args.c}
     magnetic             =  .true.
-    MagField_z           =  1e-10
+    MagField_z           =  {args.v*np.sqrt(4*np.pi)/(args.alfvenM)}
     st_computeDt         =  .false.
 
     st_rmsMagneticField  = 0
@@ -421,6 +422,7 @@ if __name__ == "__main__":
         description="Run a simulation of a turbulent dynamo."
     )
     parser.add_argument("-v", default=0.1, type=float, help="Velocity amplitude")
+    parser.add_argument("-alfvenM", default=np.sqrt(4*np.pi)*1e9, type=float, help="Alfven Mach number")
     parser.add_argument(
         "-auto_adjust",
         default=0,
