@@ -43,10 +43,8 @@ def getSnapshotInfo(turbFile, velocity, r, stf, lf, simDir, type):
     plotFileList.sort()
     timeList = []
     for plotFile in plotFileList:
-        with h5py.File(simDir + "/" + plotFile) as f:
-            dataset = f['real scalars']
-            time = dataset[dataset['name']=='time']['value']
-        timeList.append(time/getTurnOverTime(velocity))
+        dataset = hdf5ToDict(simDir + "/" + plotFile, "real scalars")
+        timeList.append(dataset["time"]/getTurnOverTime(velocity))
     
     timeList = np.array(timeList)
     plotFile = plotFileList[np.argmin(np.abs(timeList - snapshotTime))]
