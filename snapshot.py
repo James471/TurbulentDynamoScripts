@@ -88,10 +88,7 @@ def makePlots(simDirList, type, stream_var, r, stf, lf, outdir, cbar_type, redo,
             print(f"Processing for {solver}")
 
             print("Loading Turb.dat")
-            if solver == "USM-BK":
-                n = 5000
-            else:
-                n = 10
+            n = getNForTurbDat(simDir, res=5e-2)
             turbFile = loadFile(simDir + "/Turb.dat", 10, n)
             print("Loaded Turb.dat")
 

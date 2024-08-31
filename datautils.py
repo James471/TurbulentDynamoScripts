@@ -51,34 +51,29 @@ def hdf5ToDict(path, datasetname):
         dct[key.decode("utf-8").strip()] = d["value"][i]
     return dct
 
-def getNForTurbDat(simPath):
-    def getAverageDt(simPath):
-        chkFileList = [f for f in os.listdir(simPath) if f.startswith("Turb_hdf5_chk_")]
-        dtList = []
-        for plotFile in chkFileList:
-            with h5py.File(simPath + "/" + plotFile) as f:
-                dataset = f['real scalars']
-                dt = dataset[dataset['name']=='dt']['value']
-                print(dt)
-            dtList.append(dt)
-        return np.mean(np.array(dtList))
+    
+def getAverageDt(simPath):
+    chkFileList = [f for f in os.listdir(simPath) if f.startswith("Turb_hdf5_chk_")]
+    dtList = []
+    for plotFile in chkFileList:
+        dt = hdf5ToDict(f"{simPath}/{plotFile}", "real scalars")["dt"]
+        dtList.append(dt)
+    return np.mean(np.array(dtList))
+
+def getNForTurbDat(simPath, res=1e-2):
+    
     infoDict = getInfoDict(simPath)
     v = infoDict["v"]
+    nt = infoDict["nt"]
     tTurb = getTurnOverTime(v)
-    if v >= 1:
-        return 1
     os.system(f"wc {simPath}/Turb.dat -l > {simPath}/temp.txt")
     lineCount = int(open(f"{simPath}/temp.txt", "r").read().split()[0])
-    print("Linecout is:", lineCount)
-    if lineCount < 50_000:
+    dt = getAverageDt(simPath)
+    print(f"Line count is {lineCount}")
+    if lineCount < 50_000 or dt > res * tTurb:
         return 1
     else:
-        dt = getAverageDt(simPath)
-        print("dt is:", dt)
-        if dt > 1e-3 * tTurb:
-            return 1
-        else:
-            return tTurb / dt
+        return round(lineCount * res / nt)
         
 
 
