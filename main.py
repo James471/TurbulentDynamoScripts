@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import argparse
 import utils
 import pathlib
@@ -7,10 +8,10 @@ import os
 def main(args):
 
     scriptDir = pathlib.Path(__file__).parent.resolve()
-
     pathList = [args.i+_ for _ in os.listdir(args.i)]
     simList = utils.getSolverSortedList(pathList)
     sims = " ".join(simList)
+
 
     if not args.no_growth:
         refit = ""
@@ -40,13 +41,20 @@ def main(args):
         refit = ""
         if args.redo:
             refit = "-refit"
-        cmd = f"python3 {scriptDir}/spectra.py -i {sims} -o {args.o} -kin_plot -mag_plot -cur_plot -lf {args.lf} -uf {args.uf} -stf {args.stf} {shift} {refit}"
+        cmd1 = f"python3 {scriptDir}/spectra.py -i {sims} -o {args.o} -kin_plot -mag_plot -cur_plot -lf {args.lf} -uf {args.uf} -stf {args.stf} {shift} {refit}"
+        cmd2 = f"python3 {scriptDir}/spectra.py -i {sims} -o {args.o} -kin_plot -compensate -lf {args.lf} -uf {args.uf} -stf {args.stf} {shift} {refit}"
         print("Generating spectra plots")
-        print("Running:", cmd)
-        os.system(cmd)
+        print("Running:", cmd1)
+        os.system(cmd1)
+        print("Running:", cmd2)
+        os.system(cmd2)
 
-    # if not args.no_snapshot:
-    #     pass
+    if not args.no_snapshot:
+        recheck_bounds = ""
+        if args.redo:
+            recheck_bounds = "-redo"
+        cmd = f"python3 {scriptDir}/snapshot.py -i {sims} -o {args.o} -r {args.r} -stf {args.stf} -lf {args.lf} -mag -table -fontsize {args.fontsize} {recheck_bounds}"
+        os.system(cmd)
 
     if not args.no_table:
         cmd = f"python3 {scriptDir}/table.py -i {args.i}"
@@ -58,16 +66,16 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Automate production grade plots")
-    parser.add_argument("-i", type=str, help="Input Directory containing all solver simulations")
-    parser.add_argument("-o", type=str, default="./", help="Output Directory")
+    parser.add_argument("-i", type=str, default="/scratch/ek9/jw5893/TurbulentDynamo/Mach0.01/", help="Input Directory containing all solver simulations")
+    parser.add_argument("-o", type=str, default="/scratch/ek9/jw5893/TurbulentDynamo/Mach0.01/", help="Output Directory")
     parser.add_argument("-redo", action="store_true", help="Redo the analysis even if previous results are present")
     parser.add_argument("-no_growth", action="store_true", help="Do not plot growth rate")
     parser.add_argument("-no_spectra", action="store_true", help="Do not plot spectra")
     parser.add_argument("-no_snapshot", action="store_true", help="Do not plot snapshots")
     parser.add_argument("-no_table", action="store_true", help="Do not create tables")
-    parser.add_argument("-lf", type=float, default=1e-7, help="Lower bound for kinematic phase")
+    parser.add_argument("-lf", type=float, default=1e-5, help="Lower bound for kinematic phase")
     parser.add_argument("-uf", type=float, default=1e-3, help="Upper bound for kinematic phase")
-    parser.add_argument("-stf", type=float, default=5.0, help="Start time for kinematic phase")
+    parser.add_argument("-stf", type=float, default=3.0, help="Start time for kinematic phase")
     parser.add_argument("-no_shift", action="store_true", help="Do not shift the spectra for different solvers")    
 
     # Growth plot arguments
@@ -82,6 +90,8 @@ if __name__ == "__main__":
     parser.add_argument("-n", type=int, default=4, help="Number of processors for spectra generation")
 
     # Snapshot plot arguments
+    parser.add_argument("-r", type=float, default=1e-4, help="Energy ratio for projections")
+    parser.add_argument("-fontsize", type=float, default=1.45, help="Fontsize scaling to pass to flashplotlib")
 
     # Table arguments
 

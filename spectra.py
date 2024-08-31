@@ -249,7 +249,7 @@ def postPlot(plObj, spectType, compensated=False):
         # ax.legend(loc='best')
     elif spectType == "vels":
         if compensated:
-            ax.set_ylabel(r'$k^1.7P_\mathrm{kin}$')
+            ax.set_ylabel(r'$k^{1.7}P_\mathrm{kin}$')
         else:
             ax.set_ylabel(r'$P_\mathrm{kin}$')
         ax.get_xaxis().set_ticks([])
@@ -277,6 +277,7 @@ def plotScaleLoc(plObj, solverFit, type):
         for solver in solverFit:
             val = solverFit[solver]
             k_nu = val["k_tilde_nu"][0]**(1/val["p_nu"][0])
+            print(f"Value of k_nu for {solver}: {k_nu}")
             ax.plot([k_nu, k_nu], [ylim[0], 2*ylim[0]], color=COLOR_DICT[solver], scaley=False)
             if k_nu > maxKNu:
                 maxKNu = k_nu
@@ -325,9 +326,9 @@ def main(args):
         dumpDict(solverKinFit, f"{args.o}/kinFitDict.pkl")
         plotScaleLoc(plKinObj, solverKinFit, "vels")
         if args.compensate:
-            plKinObj.savefig("Compensated Kinetic Spectra.pdf")
+            plKinObj.savefig(f"{args.o}/Compensated Kinetic Spectra.pdf")
         else:
-            plKinObj.savefig("Kinetic Spectra.pdf")
+            plKinObj.savefig(f"{args.o}/Kinetic Spectra.pdf")
         plKinObj.clf(); plKinObj.cla(); plKinObj.close(); plKinObj = None
 
     
@@ -349,7 +350,7 @@ def main(args):
             postPlot(plMagObj, "mags")
         dumpDict(solverMagFit, f"{args.o}/magFitDict.pkl")
         plotScaleLoc(plMagObj, solverMagFit, "mags")
-        plMagObj.savefig("Magnetic Spectra.pdf")
+        plMagObj.savefig(f"{args.o}/Magnetic Spectra.pdf")
         plMagObj.clf(); plMagObj.cla(); plMagObj.close(); plMagObj = None
 
     if args.cur_plot:
@@ -368,7 +369,7 @@ def main(args):
             postPlot(plCurObj, "cur")
         dumpDict(solverCurFit, f"{args.o}/curFitDict.pkl")
         plotScaleLoc(plCurObj, solverCurFit, "cur")
-        plCurObj.savefig("Current Spectra.pdf")
+        plCurObj.savefig(f"{args.o}/Current Spectra.pdf")
         plCurObj.clf(); plCurObj.cla(); plCurObj.close(); plCurObj = None
 
 
