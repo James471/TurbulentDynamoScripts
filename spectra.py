@@ -2,6 +2,7 @@
 import sys
 import os
 import glob
+import socket
 
 import matplotlib
 matplotlib.use('Agg')
@@ -15,6 +16,7 @@ from scipy.optimize import fminbound
 from scipy.interpolate import CubicSpline
 
 from constants import *
+from datautils import *
 from utils import *
 from myconfig import *
 import designParams
@@ -23,7 +25,7 @@ import cfpack as cfp
 import flashlib as fl
 import turblib as tl
 
-
+from ipdb import set_trace as stop
 
 def Re_fun(k_nu, c_nu):
     return (k_nu/(c_nu * 2))**(4/3)
@@ -49,7 +51,7 @@ def Log10_P_mag(k, A_mag, p_mag, p_eta, k_tilde_eta):
     return np.log10(y)
 
 
-def generateSpectra(simDir, verbose, spectType, infoDict, lf, uf, stf, n=1):
+def generateSpectra(simDir, verbose, spectType, infoDict, lf, uf, stf, nProcs=1):
     '''
     verbsoe  : Could be 0 or 1 or 2
     spectType: Could be 'vels' or 'curr' or 'mags'
@@ -57,10 +59,10 @@ def generateSpectra(simDir, verbose, spectType, infoDict, lf, uf, stf, n=1):
 
     if verbose == 2:
         datFileVerbose = 1
-        devNull = " > /dev/null 2>&1"
+        devNull = ""
     else:
         datFileVerbose = 0
-        devNull = ""
+        devNull = " > /dev/null 2>&1"
 
     spectraDir = simDir + "/spectra"
     if not os.path.isdir(spectraDir):
@@ -69,15 +71,18 @@ def generateSpectra(simDir, verbose, spectType, infoDict, lf, uf, stf, n=1):
 
     files = sorted(glob.glob(simDir+"/Turb_hdf5_plt_cnt_????"))
 
-    dt = infoDict['dt']
     t_turb = 1 / (2 * infoDict['v'])
-    if verbose > 0: print("Loading turb.dat for cleaning")
-    datfile_obj = fl.datfile(simDir+"/Turb.dat", verbose=datFileVerbose)
-    datfile_obj.write_cleaned()
-    if verbose > 0: print("Turb.dat cleaned")
+    if not os.path.exists(simDir+"/Turb.dat_cleaned"):
+        if verbose > 0: print("Loading turb.dat for cleaning")
+        datfile_obj = fl.datfile(simDir+"/Turb.dat", verbose=datFileVerbose)
+        datfile_obj.write_cleaned()
+        if verbose > 0: print("Turb.dat cleaned")
+    else:
+        print("Turb.dat_cleaned already exists")
 
+    n = getNForTurbDat(simDir, res=5e-2, filename="Turb.dat_cleaned")
     if verbose > 0: print("Loading cleaned turb.dat")
-    dat = np.loadtxt(simDir + "/Turb.dat_cleaned", unpack=True, skiprows=10)
+    dat = loadFile(simDir + "/Turb.dat_cleaned", shift=10, n=n)
     if verbose > 0: print("Loaded Turb.dat_cleaned")
 
     emag_over_ekin = dat[E_MAG_COLUMN_INDEX].flatten() / dat[E_KIN_COLUMN_INDEX].flatten()
@@ -99,7 +104,11 @@ def generateSpectra(simDir, verbose, spectType, infoDict, lf, uf, stf, n=1):
         for x in range(dumpNStart, dumpNEnd+1):
             if verbose > 0: print("Adding current variable to dump:", x)
             f = simDir+"/Turb_hdf5_plt_cnt_{:04d}".format(x)
-            derivCmd = f"mpirun -np {n} /home/100/jw5893/flash-tools/tools/derivative_var/derivative_var {f} -current {devNull}"
+            print("In current spectra")
+            if "nid" in socket.gethostname():
+                derivCmd = f"srun -n {nProcs} /software/projects/pawsey0810/jwatt/flash-tools/tools/derivative_var/derivative_var {f} -current {devNull}"
+            else:
+                derivCmd = f"mpirun -np {nProcs} /home/100/jw5893/flash-tools/tools/derivative_var/derivative_var {f} -current {devNull}"
             os.system(derivCmd)
     elif spectType == "vels":
         types = "1"
@@ -116,7 +125,11 @@ def generateSpectra(simDir, verbose, spectType, infoDict, lf, uf, stf, n=1):
     for x in range(dumpNStart, dumpNEnd+1):
         if verbose > 0: print("Processing dump to generate spectra:", x)
         f = simDir+"/Turb_hdf5_plt_cnt_{:04d}".format(x)
-        spectrCmd = f"mpirun -np {n} /home/100/jw5893/flash-tools/tools/spectra_mpi/spectra_mpi {f} -types {types} {devNull}"
+        if "nid" in socket.gethostname():
+            spectrCmd = f"srun -n {nProcs} /software/projects/pawsey0810/jwatt/flash-tools/tools/spectra_mpi/spectra_mpi {f} -types {types} {devNull}"
+        else:
+            spectrCmd = f"mpirun -np {nProcs} /home/100/jw5893/flash-tools/tools/spectra_mpi/spectra_mpi {f} -types {types} {devNull}"
+        print(f"Running: {spectrCmd}")
         os.system(spectrCmd)
     mvCmd = "mv "+simDir+"/Turb_hdf5_plt_cnt_????_spect_*.dat "+spectraDir
     os.system(mvCmd)
@@ -239,7 +252,7 @@ def fit_func(spectType, simDir, kFit, log10PTotFit, deltaLog10PTotFit, params, c
     return fitDict
 
 def postPlot(plObj, spectType, compensated=False):
-    ax = plObj.gca()
+    ax = plObj.ax()
     ax.set_xscale('log')
     ax.set_yscale('log')
     if spectType == "mags":
@@ -260,7 +273,7 @@ def postPlot(plObj, spectType, compensated=False):
         # ax.legend(loc='best')
 
 def plotScaleLoc(plObj, solverFit, type):
-    ax = plObj.gca()
+    ax = plObj.ax()
     ylim = ax.get_ylim()
     if type == "mags":
         ax.plot([10, 10], [ylim[0], 2*ylim[0]], color="white", scaley=False)
@@ -326,10 +339,10 @@ def main(args):
         dumpDict(solverKinFit, f"{args.o}/kinFitDict.pkl")
         plotScaleLoc(plKinObj, solverKinFit, "vels")
         if args.compensate:
-            plKinObj.savefig(f"{args.o}/Compensated Kinetic Spectra.pdf")
+            plKinObj.ax().figure.savefig(f"{args.o}/Compensated Kinetic Spectra.pdf")
         else:
-            plKinObj.savefig(f"{args.o}/Kinetic Spectra.pdf")
-        plKinObj.clf(); plKinObj.cla(); plKinObj.close(); plKinObj = None
+            plKinObj.ax().figure.savefig(f"{args.o}/Kinetic Spectra.pdf")
+        plKinObj.ax().figure.clf(); plKinObj.ax().cla(); pl.close(); plKinObj = None
 
     
     if args.mag_plot:
@@ -350,8 +363,8 @@ def main(args):
             postPlot(plMagObj, "mags")
         dumpDict(solverMagFit, f"{args.o}/magFitDict.pkl")
         plotScaleLoc(plMagObj, solverMagFit, "mags")
-        plMagObj.savefig(f"{args.o}/Magnetic Spectra.pdf")
-        plMagObj.clf(); plMagObj.cla(); plMagObj.close(); plMagObj = None
+        plMagObj.ax().figure.savefig(f"{args.o}/Magnetic Spectra.pdf")
+        plMagObj.ax().figure.clf(); plMagObj.ax().cla(); pl.close(); plMagObj = None
 
     if args.cur_plot:
         solverCurFit = {}
@@ -369,8 +382,8 @@ def main(args):
             postPlot(plCurObj, "cur")
         dumpDict(solverCurFit, f"{args.o}/curFitDict.pkl")
         plotScaleLoc(plCurObj, solverCurFit, "cur")
-        plCurObj.savefig(f"{args.o}/Current Spectra.pdf")
-        plCurObj.clf(); plCurObj.cla(); plCurObj.close(); plCurObj = None
+        plCurObj.ax().figure.savefig(f"{args.o}/Current Spectra.pdf")
+        plCurObj.ax().figure.clf(); plCurObj.ax().cla(); pl.close(); plCurObj = None
 
 
 
@@ -385,7 +398,7 @@ if __name__ == "__main__":
     parser.add_argument("-compensate", action="store_true", help="Compensate for k^1.7. Works only for the kinetic spectra.")
     parser.add_argument("-cur_plot", action="store_true", help="Plot current spectra")
     parser.add_argument("-mag_plot", action="store_true", help="Plot magnetic spectra")
-    parser.add_argument("-v", type=int, default=0, help="Verbose")
+    parser.add_argument("-v", type=int, default=2, help="Verbose")
     parser.add_argument("-lf", type=float, default=1e-7, help="Lower bound for kinematic phase")
     parser.add_argument("-uf", type=float, default=1e-3, help="Upper bound for kinematic phase")
     parser.add_argument("-stf", type=float, default=5.0, help="Start time for kinematic phase")
@@ -396,6 +409,5 @@ if __name__ == "__main__":
     commonKeys = ["n", "o", "v", "mag_spect", "kin_spect", "cur_spect", "mag_plot", "kin_plot", "cur_plot", "legend", "lf", "uf", "stf", "refit", "compensate", "no_shift"]
 
     args = parseArgs(parser.parse_args(), commonKeys)
-    print(args)
 
     main(args)

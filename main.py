@@ -29,7 +29,7 @@ def main(args):
 
         for sim in simList:
             if not os.path.exists(f"{sim}/spectra") or args.recreate_spectra:
-                recreate = f"-kin_spect -mag_spect -cur_spect -n {args.n}"
+                recreate = f"-kin_spect -mag_spect -cur_spect -n {args.n} -lf {args.lf} -uf {args.uf} -stf {args.stf}"
                 cmd = f"python3 {scriptDir}/spectra.py -i {sim} -o {args.o} {recreate}"
                 print("Generating spectra files")
                 print("Running:", cmd)

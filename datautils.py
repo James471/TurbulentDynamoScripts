@@ -60,13 +60,14 @@ def getAverageDt(simPath):
         dtList.append(dt)
     return np.mean(np.array(dtList))
 
-def getNForTurbDat(simPath, res=1e-2):
+
+def getNForTurbDat(simPath, res=1e-2, filename="Turb.dat"):
     
     infoDict = getInfoDict(simPath)
     v = infoDict["v"]
     nt = infoDict["nt"]
     tTurb = getTurnOverTime(v)
-    os.system(f"wc {simPath}/Turb.dat -l > {simPath}/temp.txt")
+    os.system(f"wc {simPath}/{filename} -l > {simPath}/temp.txt")
     lineCount = int(open(f"{simPath}/temp.txt", "r").read().split()[0])
     dt = getAverageDt(simPath)
     print(f"Line count is {lineCount}")
@@ -75,7 +76,6 @@ def getNForTurbDat(simPath, res=1e-2):
     else:
         return round(lineCount * res / nt)
         
-
 
 def getInfoDict(dirPath):
     # if os.path.exists(args.i + "/info.pkl"):
