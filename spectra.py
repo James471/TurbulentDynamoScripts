@@ -255,22 +255,28 @@ def postPlot(plObj, spectType, compensated=False):
     ax = plObj.ax()
     ax.set_xscale('log')
     ax.set_yscale('log')
+    ylabel=""
+    xlabel=""
     if spectType == "mags":
-        ax.set_ylabel(r'$P_\mathrm{mag}$')
+        ylabel=r'$P_\mathrm{mag}$'
+        ax.set_ylabel(ylabel)
         ax.get_xaxis().set_ticks([])
         # ax.set_xlabel(r'$k$')
         # ax.legend(loc='best')
     elif spectType == "vels":
         if compensated:
-            ax.set_ylabel(r'$k^{1.7}P_\mathrm{kin}$')
+            ylabel=r'$k^{1.7}P_\mathrm{kin}$'
         else:
-            ax.set_ylabel(r'$P_\mathrm{kin}$')
+            ylabel=r'$P_\mathrm{kin}$'
         ax.get_xaxis().set_ticks([])
-        ax.legend(loc='best')
-    elif spectType == "cur":
-        ax.set_ylabel(r'$P_\mathrm{cur}$')
-        ax.set_xlabel(r'$k$')
         # ax.legend(loc='best')
+    elif spectType == "cur":
+        ylabel=r'$P_\mathrm{cur}$'
+        xlabel=r'$k$'
+        ax.set_ylabel(ylabel)
+        ax.set_xlabel(xlabel)
+        # ax.legend(loc='best')
+    return xlabel, ylabel
 
 def plotScaleLoc(plObj, solverFit, type):
     ax = plObj.ax()
@@ -335,14 +341,16 @@ def main(args):
                 print("Using kin dict:", kinParams)
             plKinObj, fitDict = plotSpectra(simDir, 1, "vels", fact, infoDict, kinParams, args.o, compensate=args.compensate, fit=fit)
             solverKinFit[infoDict['solver']] = fitDict
-            postPlot(plKinObj, "vels", args.compensate)
+        xlabel, ylabel=postPlot(plKinObj, "vels", args.compensate)
         dumpDict(solverKinFit, f"{args.o}/kinFitDict.pkl")
         plotScaleLoc(plKinObj, solverKinFit, "vels")
         if args.compensate:
-            plKinObj.ax().figure.savefig(f"{args.o}/Compensated Kinetic Spectra.pdf")
+            cfp.plot(save=f"{args.o}/Compensated Kinetic Spectra.pdf", legend_loc="best", xlabel=xlabel, ylabel=ylabel)
+            # plKinObj.ax().figure.savefig(f"{args.o}/Compensated Kinetic Spectra.pdf")
         else:
-            plKinObj.ax().figure.savefig(f"{args.o}/Kinetic Spectra.pdf")
-        plKinObj.ax().figure.clf(); plKinObj.ax().cla(); pl.close(); plKinObj = None
+            cfp.plot(save=f"{args.o}/Kinetic Spectra.pdf", legend_loc="best", xlabel=xlabel, ylabel=ylabel)
+            # plKinObj.ax().figure.savefig(f"{args.o}/Kinetic Spectra.pdf")
+        # plKinObj.ax().figure.clf(); plKinObj.ax().cla(); pl.close(); plKinObj = None
 
     
     if args.mag_plot:
@@ -399,9 +407,9 @@ if __name__ == "__main__":
     parser.add_argument("-cur_plot", action="store_true", help="Plot current spectra")
     parser.add_argument("-mag_plot", action="store_true", help="Plot magnetic spectra")
     parser.add_argument("-v", type=int, default=2, help="Verbose")
-    parser.add_argument("-lf", type=float, default=1e-7, help="Lower bound for kinematic phase")
+    parser.add_argument("-lf", type=float, default=1e-5, help="Lower bound for kinematic phase")
     parser.add_argument("-uf", type=float, default=1e-3, help="Upper bound for kinematic phase")
-    parser.add_argument("-stf", type=float, default=5.0, help="Start time for kinematic phase")
+    parser.add_argument("-stf", type=float, default=3.0, help="Start time for kinematic phase")
     parser.add_argument("-n", type=int, default=1, help="Number of processors for spectra generation")
     parser.add_argument("-refit", action="store_true", help="Refit the spectra even if a fit file is present")
     parser.add_argument("-no_shift", action="store_true", help="Do not shift the spectra for different solvers")

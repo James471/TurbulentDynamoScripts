@@ -102,7 +102,7 @@ def main(args):
         sat_neg_er = growthDict[solver]["sat"][1]
         sat_pos_er = growthDict[solver]["sat"][2]
 
-        table1Data += f"{SOLVER_DICT[solver]} & ${tau:.4f}^{{+{tau_pos_er:.4f}}}_{{{tau_neg_er:.4f}}}$ & ${sat:.2f}^{{+{sat_pos_er:.2f}}}_{{{sat_neg_er:.2f}}}$ & ${p_bn:.2f}^{{+{p_bn_pos_er:.2f}}}_{{{p_bn_neg_er:.2f}}}$ & ${k_bn:.1f}^{{+{k_bn_pos_er:.1f}}}_{{{k_bn_neg_er:.1f}}}$ & ${k_nu:.2f}^{{+{k_nu_pos_er:.2f}}}_{{{k_nu_neg_er:.2f}}}$ &  ${k_eta:.1f}^{{+{k_eta_pos_er:.1f}}}_{{{k_eta_neg_er:.1f}}}$ \\\\ \n"
+        table1Data += f"{SOLVER_DICT[solver]} & ${tau:.3f}^{{+{tau_pos_er:.3f}}}_{{{tau_neg_er:.3f}}}$ & ${sat:.2f}^{{+{sat_pos_er:.2f}}}_{{{sat_neg_er:.2f}}}$ & ${p_bn:.2f}^{{+{p_bn_pos_er:.2f}}}_{{{p_bn_neg_er:.2f}}}$ & ${k_bn:.1f}^{{+{k_bn_pos_er:.1f}}}_{{{k_bn_neg_er:.1f}}}$ & ${k_nu:.2f}^{{+{k_nu_pos_er:.2f}}}_{{{k_nu_neg_er:.2f}}}$ &  ${k_eta:.1f}^{{+{k_eta_pos_er:.1f}}}_{{{k_eta_neg_er:.1f}}}$ \\\\ \n"
         table2Data += f"{SOLVER_DICT[solver]} & ${getNum(Re)}\\times10^{{{getPwr(Re)}}}$ & ${getNum(Rm)}\\times10^{{{getPwr(Rm)}}}$\\\\ \n"
 
     table1Str = f'''

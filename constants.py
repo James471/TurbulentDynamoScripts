@@ -11,6 +11,6 @@ SOLVER_DICT = {"8wave": "Split-Roe", "bouchut-split": "Split-Bouchut", "Roe": "U
 COLOR_DICT = {"8wave": "#377eb8", "HLLD": "#984ea3", "HLLC": "#4daf4a", 
               "Roe": "#a65628", "bouchut-split": "#f781bf", "bk-usm": "#ff7f00"}
 
-ORDER_DICT = {"8wave": 0, "bouchut-split": 1, "Roe": 2, "HLLD": 3, "HLLC": 4, "bk-usm": 5}
+ORDER_DICT = {"8wave": 0, "bouchut-split": 1, "Roe": 4, "HLLD": 2, "HLLC": 3, "bk-usm": 5}
 
 FACT_DICT = {"bk-usm": 1.0, "Roe": 0.1, "HLLC": 0.01, "HLLD": 0.001, "bouchut-split": 0.0001, "8wave": 0.00001}

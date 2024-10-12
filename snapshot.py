@@ -7,6 +7,7 @@ import os
 import re
 import sys
 import h5py
+from decimal import Decimal
 from ipdb import set_trace as stop
 
 from myconfig import *
@@ -138,7 +139,9 @@ def makePlots(simDirList, type, stream_var, r, stf, lf, outdir, cbar_type, redo,
         os.system(cmd)
 
     print("Making colorbar")
-    cbarCmd = f'python3 {PYTHON_PATH}/flashplotlib.py -fontsize {fontsize} -i {simDirList[0]}/Turb_hdf5_plt_cnt_0000 -d dens -verbose 2 -outtype pdf -outdir {outdir} -outname {type}Bar -ncpu 1 -colorbar "panels2 only" -vmin {vMin} -vmax {vMax} -cmap_label "\$E_\\mathrm{{{type}}}/E_\\mathrm{{{type},\,total}}\$ (Projection length \$z=L\$)" -cmap {cbar_type} &>/dev/null'
+    pwr_low = int((f"{Decimal(vMin):.1E}").split("E")[1])
+    pwr_high = int((f"{Decimal(vMax):.1E}").split("E")[1])+1
+    cbarCmd = f'python3 {PYTHON_PATH}/flashplotlib.py -fontsize {fontsize} -i {simDirList[0]}/Turb_hdf5_plt_cnt_0000 -d dens -verbose 2 -outtype pdf -outdir {outdir} -outname {type}Bar -ncpu 1 -colorbar "panels2 only" -vmin {10**pwr_low} -vmax {10**pwr_high} -cmap_label "\$E_\\mathrm{{{type}}}/E_\\mathrm{{{type},\,total}}\$ (Projection length \$z=L\$)" -cmap {cbar_type} &>/dev/null'
     os.system(cbarCmd)
 
 
