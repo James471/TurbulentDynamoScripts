@@ -64,7 +64,7 @@ def getSnapshotInfo(turbFile, velocity, r, stf, lf, simDir, type):
     return plotFile, eTot
 
 
-def makePlots(simDirList, type, stream_var, r, stf, lf, outdir, cbar_type, redo, fontsize=1):
+def makePlots(simDirList, type, stream_var, r, stf, lf, outdir, cbar_type, redo, fontsize=1, clow=None, chigh=None):
     
     plotFileDict = {}
     boundDict = {}
@@ -139,9 +139,17 @@ def makePlots(simDirList, type, stream_var, r, stf, lf, outdir, cbar_type, redo,
         os.system(cmd)
 
     print("Making colorbar")
-    pwr_low = int((f"{Decimal(vMin):.1E}").split("E")[1])
-    pwr_high = int((f"{Decimal(vMax):.1E}").split("E")[1])+1
-    cbarCmd = f'python3 {PYTHON_PATH}/flashplotlib.py -fontsize {fontsize} -i {simDirList[0]}/Turb_hdf5_plt_cnt_0000 -d dens -verbose 2 -outtype pdf -outdir {outdir} -outname {type}Bar -ncpu 1 -colorbar "panels2 only" -vmin {10**pwr_low} -vmax {10**pwr_high} -cmap_label "\$E_\\mathrm{{{type}}}/E_\\mathrm{{{type},\,total}}\$ (Projection length \$z=L\$)" -cmap {cbar_type} &>/dev/null'
+    if clow is None:
+        pwr_low = int((f"{Decimal(vMin):.1E}").split("E")[1])
+        vmin = 10**pwr_low
+    else:
+        vmin = clow
+    if chigh is None:
+        pwr_high = int((f"{Decimal(vMax):.1E}").split("E")[1])+1
+        vmax = 10**pwr_high
+    else:
+        vmax = chigh
+    cbarCmd = f'python3 {PYTHON_PATH}/flashplotlib.py -fontsize {fontsize} -i {simDirList[0]}/Turb_hdf5_plt_cnt_0000 -d dens -verbose 2 -outtype pdf -outdir {outdir} -outname {type}Bar -ncpu 1 -colorbar "panels2 only" -vmin {vmin} -vmax {vmax} -cmap_label "\$E_\\mathrm{{{type}}}/E_\\mathrm{{{type},\,total}}\$ (Projection length \$z=L\$)" -cmap {cbar_type} &>/dev/null'
     os.system(cbarCmd)
 
 
@@ -181,11 +189,11 @@ def main(args):
     outdir = args.o
 
     if args.kin:
-        makePlots(simList, "kin", args.kin_stream, args.r, args.stf, args.lf, outdir, args.cbar_type, args.redo, args.fontsize)
+        makePlots(simList, "kin", args.kin_stream, args.r, args.stf, args.lf, outdir, args.cbar_type, args.redo, args.fontsize, args.clow, args.chigh)
         if args.table:
             makeTable(simList, outdir, "kin")
     if args.mag:
-        makePlots(simList, "mag", args.mag_stream, args.r, args.stf, args.lf, outdir, args.cbar_type, args.redo, args.fontsize)
+        makePlots(simList, "mag", args.mag_stream, args.r, args.stf, args.lf, outdir, args.cbar_type, args.redo, args.fontsize, args.clow, args.chigh)
         if args.table:
             makeTable(simList, outdir, "mag")
 
@@ -204,10 +212,12 @@ if __name__ == "__main__":
     parser.add_argument("-cbar_type", type=str, default="magma", help="Colorbar type")
     parser.add_argument("-kin_stream", type=str, default=None, choices=['vel', 'mag'], help="Streamline on kinetic energy")
     parser.add_argument("-mag_stream", type=str, default=None, choices=['vel', 'mag'], help="Streamline on magnetic energy")
+    parser.add_argument("-clow", type=float, default=None, help="Lower bound for colorbar")
+    parser.add_argument("-chigh", type=float, default=None, help="Upper bound for colorbar")
     parser.add_argument("-redo", action='store_true', help="Redo the bounds calculation")
-    parser.add_argument("-fontsize", type=float, default=2.5, help="Fontsize to pass to flashplotlib")
+    parser.add_argument("-fontsize", type=float, default=1.5, help="Fontsize to pass to flashplotlib")
 
-    commonKeys = ["r", "o", "kin", "mag", "cbar_type", "kin_stream", "mag_stream", "table", "redo", "fontsize"]
+    commonKeys = ["r", "o", "kin", "mag", "cbar_type", "kin_stream", "mag_stream", "table", "redo", "fontsize", "clow", "chigh"]
 
     args = parseArgs(parser.parse_args(), commonKeys)
 
