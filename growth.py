@@ -21,7 +21,7 @@ def model(t, alpha, lnA, t0):
     return lnA + alpha * (t - t0)
 
 
-def addPlot(axMach, axRatio, f, label, color, low, high, velocity, stf, sbs, fitMethod, fitParam=None):
+def addPlot(axMach, axRatio, f, label, color, low, high, velocity, stf, sbs, fitMethod, fitParam=None, nofit=False):
     '''
     fitParam is valid only if fitMethod="none"
     '''
@@ -30,40 +30,43 @@ def addPlot(axMach, axRatio, f, label, color, low, high, velocity, stf, sbs, fit
     ratio = getEMagOverEKin(f)
     axMach.plot(t, mach, color=color)
     axRatio.plot(t, ratio, color=color, label=label)
+
+    fit = None
     
-    fitMask = (t > stf) & (ratio > low) & (ratio < high)
-    t_fit = t[fitMask]
-    ratio_fit = ratio[fitMask]
-    alphaGuess = np.log(ratio_fit[-1]/ratio_fit[0])/(t_fit[-1]-t_fit[0])
-    lnAGuess = np.log(ratio_fit[0])
-    guessParam = {"alpha": [0, alphaGuess, np.inf], "lnA": [-np.inf, lnAGuess, np.inf]}
+    if not nofit:
+        fitMask = (t > stf) & (ratio > low) & (ratio < high)
+        t_fit = t[fitMask]
+        ratio_fit = ratio[fitMask]
+        alphaGuess = np.log(ratio_fit[-1]/ratio_fit[0])/(t_fit[-1]-t_fit[0])
+        lnAGuess = np.log(ratio_fit[0])
+        guessParam = {"alpha": [0, alphaGuess, np.inf], "lnA": [-np.inf, lnAGuess, np.inf]}
 
-    fit = {}
+        fit = {}
 
-    if fitMethod == "scp":
-        popt, pcov = curve_fit(lambda t, alpha, lnA: model(t, alpha, lnA, t_fit[0]), t_fit, np.log(ratio_fit), p0=[alphaGuess, lnAGuess])
-        fit["alpha"] = (popt[0], -np.sqrt(pcov[0][0]), np.sqrt(pcov[0][0]))
-        fit["lnA"] = (popt[1], -np.sqrt(pcov[1][1]), np.sqrt(pcov[1][1]))
-    elif fitMethod == "asym":
-        temp = cfp.fit(lambda t, alpha, lnA: model(t, alpha, lnA, t_fit[0]), t_fit, np.log(ratio_fit), params=guessParam)
-        fit["alpha"] = (temp.popt[0], temp.perr[0][0], temp.perr[0][1])
-        fit["lnA"] = (temp.popt[1], temp.perr[1][0], temp.perr[1][1])
-    elif fitMethod == "syst":
-        temp = cfp.fit(lambda t, alpha, lnA: model(t, alpha, lnA, t_fit[0]), t_fit, np.log(ratio_fit), params=guessParam, perr_method="systematic", dat_frac_for_systematic_perr=0.2)
-        fit["alpha"] = (temp.popt[0], temp.perr[0][0], temp.perr[0][1])
-        fit["lnA"] = (temp.popt[1], temp.perr[1][0], temp.perr[1][1])
-    elif fitMethod == "none":
-        fit = fitParam
+        if fitMethod == "scp":
+            popt, pcov = curve_fit(lambda t, alpha, lnA: model(t, alpha, lnA, t_fit[0]), t_fit, np.log(ratio_fit), p0=[alphaGuess, lnAGuess])
+            fit["alpha"] = (popt[0], -np.sqrt(pcov[0][0]), np.sqrt(pcov[0][0]))
+            fit["lnA"] = (popt[1], -np.sqrt(pcov[1][1]), np.sqrt(pcov[1][1]))
+        elif fitMethod == "asym":
+            temp = cfp.fit(lambda t, alpha, lnA: model(t, alpha, lnA, t_fit[0]), t_fit, np.log(ratio_fit), params=guessParam)
+            fit["alpha"] = (temp.popt[0], temp.perr[0][0], temp.perr[0][1])
+            fit["lnA"] = (temp.popt[1], temp.perr[1][0], temp.perr[1][1])
+        elif fitMethod == "syst":
+            temp = cfp.fit(lambda t, alpha, lnA: model(t, alpha, lnA, t_fit[0]), t_fit, np.log(ratio_fit), params=guessParam, perr_method="systematic", dat_frac_for_systematic_perr=0.2)
+            fit["alpha"] = (temp.popt[0], temp.perr[0][0], temp.perr[0][1])
+            fit["lnA"] = (temp.popt[1], temp.perr[1][0], temp.perr[1][1])
+        elif fitMethod == "none":
+            fit = fitParam
 
-    if fitMethod != "none":
-        sat_level = np.mean(ratio[t>sbs])
-        sat_er = np.std(ratio[t>sbs])
-        fit["sat"] = (sat_level, -sat_er, sat_er)
+        if fitMethod != "none":
+            sat_level = np.mean(ratio[t>sbs])
+            sat_er = np.std(ratio[t>sbs])
+            fit["sat"] = (sat_level, -sat_er, sat_er)
 
-    print(f"{label}_tau: {fit['alpha']}")
-    print(f"{label}_sat: {fit['sat']}")
+        print(f"{label}_tau: {fit['alpha']}")
+        print(f"{label}_sat: {fit['sat']}")
     
-    axRatio.plot(t_fit, np.exp(model(t_fit, fit["alpha"][0], fit["lnA"][0], t_fit[0])), color="black")
+        axRatio.plot(t_fit, np.exp(model(t_fit, fit["alpha"][0], fit["lnA"][0], t_fit[0])), color="black")
 
     return fit
 
@@ -97,13 +100,17 @@ def main(args):
         velocity = infoDict["v"]
         label = SOLVER_DICT[infoDict["solver"]]
         color = COLOR_DICT[infoDict["solver"]]
+        print(f"Processing {label}")
         n = getNForTurbDat(file, res=5e-3)
-        fit = addPlot(axMach, axRatio, loadFile(file + "/Turb.dat", args.sr[index], n), label, color, args.lf[index], 
+        name = "/Turb.dat_cleaned" if os.path.exists(file + "/Turb.dat_cleaned") else "/Turb.dat"
+        fit = addPlot(axMach, axRatio, loadFile(file + name, args.sr[index], n), label, color, args.lf[index], 
                       args.uf[index], velocity, args.stf[index], args.sbs[index], fitMethod, 
-                      fitParam=fitDict[infoDict["solver"]])
-        fitDict[infoDict["solver"]] = fit
+                      fitParam=fitDict[infoDict["solver"]], nofit=args.nofit)
+        if not args.nofit:
+            fitDict[infoDict["solver"]] = fit
 
-    dumpDict(fitDict, args.o+"/growthDict.pkl")
+    if not args.nofit:
+        dumpDict(fitDict, args.o+"/growthDict.pkl")
 
     # order = [i for i in range(0, 6)]
     # order[1], order[2], order[3], order[4] = order[3], order[1], order[4], order[2]
@@ -132,8 +139,9 @@ if __name__ == "__main__":
     parser.add_argument("-ud", type=float, default=5e0, help="Upper bound to display")
     parser.add_argument("-fit", type=str, default="syst", help="Fit method to use")
     parser.add_argument("-refit", action="store_true", help="Refit the data")
+    parser.add_argument("-nofit", action="store_true", help="Do not fit the data")
 
-    commonKeys = ["ld", "ud", "fit", "refit"]
+    commonKeys = ["ld", "ud", "fit", "refit", "nofit"]
 
     args = parseArgs(parser.parse_args(), commonKeys)
     print(args)
