@@ -18,9 +18,7 @@ from scipy.interpolate import CubicSpline
 from constants import *
 from datautils import *
 from utils import *
-from myconfig import *
 import designParams
-sys.path.append(PYTHON_PATH)
 import cfpack as cfp
 import flashlib as fl
 import turblib as tl
@@ -338,7 +336,10 @@ def main(args):
             if not args.refit and os.path.exists(f"{args.o}/kinFitDict.pkl"):
                 fit = False
             kinParams = {"A_kin": [-8, -5, -2], "p_bn": [0, 1, np.inf], "k_bn": [0.1, 4.0, 128], "k_tilde_nu": [0.1, 4.0, 128], "p_nu": [1, 1, 1+1e-6]}
-            if os.path.exists(simDir+"/spectra/kinFitInit.txt"):
+            if os.path.exists(args.fitFile[simList.index(simDir)]):
+                kinParams = txtToCfpDict(args.fitFile[simList.index(simDir)])
+                print("Using kin dict:", kinParams)
+            elif os.path.exists(simDir+"/spectra/kinFitInit.txt"):
                 kinParams = txtToCfpDict(simDir+"/spectra/kinFitInit.txt")
                 print("Using kin dict:", kinParams)
             plKinObj, fitDict = plotSpectra(simDir, 1, "vels", fact, infoDict, kinParams, args.o, compensate=args.compensate, fit=fit)
@@ -399,8 +400,9 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Automate production grade plots")
-    parser.add_argument("-i", type=str, nargs="*", help="Input Directories")
+    parser.add_argument("-i", type=str, nargs="*", default=["/scratch/pawsey0810/jwatt/TurbulentDynamo/M0.01HighRes/HLLD", "/scratch/pawsey0810/jwatt/TurbulentDynamo/M0.01HighRes/BK"], help="Input Directories")
     parser.add_argument("-o", type=str, default="./", help="Output Directory")
+    parser.add_argument("-fitFile", type=str, default=["./HLLD_fit.txt", "./BK_fit.txt"], nargs="*", help="Initial fit file")
     parser.add_argument("-kin_spect", action="store_true", help="Generate kinetic spectra")
     parser.add_argument("-cur_spect", action="store_true", help="Generate current spectra")
     parser.add_argument("-mag_spect", action="store_true", help="Generate magnetic spectra")
