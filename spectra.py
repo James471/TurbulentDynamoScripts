@@ -25,6 +25,8 @@ import turblib as tl
 
 from ipdb import set_trace as stop
 
+p_kin = -1.5 # global hack
+
 def Re_fun(k_nu, c_nu):
     return (k_nu/(c_nu * 2))**(4/3)
 
@@ -39,9 +41,8 @@ def Rm_fun(k_nu, c_nu, k_tilde_eta, p_eta, c_eta):
     return Pm * Re_fun(k_nu, c_nu)
 
 
-def Log10_P_kin(k, A_kin, p_bn, k_bn, k_tilde_nu, p_nu):
-    p_kin = -(5/3)
-    return np.log10(((k / k_bn)**p_kin + (k / k_bn)**p_bn) * np.exp(-(k / k_tilde_nu)**p_nu)) + A_kin
+def Log10_P_kin(k, A_kin, p_bn, k_bn, k_nu_tilde, p_nu):
+    return np.log10(((k / k_bn)**p_kin + (k / k_bn)**p_bn) * np.exp(-(k / k_nu_tilde)**p_nu)) + A_kin
 
 
 def Log10_P_mag(k, A_mag, p_mag, p_eta, k_tilde_eta):
@@ -169,8 +170,8 @@ def plotSpectra(simDir, verbose, spectType, fact, infoDict, params, outdir, comp
     deltaLog10PTotFit = np.array(deltaLog10PTot[(k >= kFitMin) & (k <= kFitMax)].tolist())
 
     if compensate and spectType == "vels":
-        compensateFact = k**(5/3)
-        compensateFitFact = kFit**(5/3)
+        compensateFact = k**(-p_kin)
+        compensateFitFact = kFit**(-p_kin)
 
     else:
         compensateFact = 1
@@ -190,7 +191,7 @@ def plotSpectra(simDir, verbose, spectType, fact, infoDict, params, outdir, comp
             # cfp.plot(compensateFitFact * fact * 10**Log10_P_mag(kFit, *(fitDict["A_mag"][0], fitDict["p_mag"][0], fitDict["p_eta"][0], fitDict["k_tilde_eta"][0])), kFit, color="black")
         elif spectType == "vels":
             fitDict = loadDict(f"{outdir}/kinFitDict.pkl")[infoDict['solver']]
-            cfp.plot(compensateFitFact * fact * 10**Log10_P_kin(kFit, *(fitDict["A_kin"][0], fitDict["p_bn"][0], fitDict["k_bn"][0], fitDict["k_tilde_nu"][0]), fitDict["p_nu"][0]), kFit, color="black")
+            cfp.plot(compensateFitFact * fact * 10**Log10_P_kin(kFit, *(fitDict["A_kin"][0], fitDict["p_bn"][0], fitDict["k_bn"][0], fitDict["k_nu_tilde"][0]), fitDict["p_nu"][0]), kFit, color="black")
         elif spectType == "cur":
             fitDict = loadDict(f"{outdir}/curFitDict.pkl")[infoDict['solver']]
 
@@ -239,12 +240,12 @@ def fit_func(spectType, simDir, kFit, log10PTotFit, deltaLog10PTotFit, params, c
 
     elif spectType == "vels":
         if verbose: print("Kin Spectra-> Fitting for:", infoDict['solver'])
-        kinFit = cfp.fit(Log10_P_kin, kFit, log10PTotFit, xerr=None, yerr=deltaLog10PTotFit, params=params, n_random_draws=1000)
+        kinFit = cfp.fit(Log10_P_kin, kFit, log10PTotFit, xerr=None, yerr=deltaLog10PTotFit, params=params, n_random_draws=100)
         cfp.plot(fact * 10**Log10_P_kin(kFit, *(kinFit.popt)) * compensateFitFact, kFit, color="black")
         fitDict["A_kin"] = (kinFit.popt[0], kinFit.perr[0][0], kinFit.perr[0][1])
         fitDict["p_bn"] = (kinFit.popt[1], kinFit.perr[1][0], kinFit.perr[1][1])
         fitDict["k_bn"] = (kinFit.popt[2], kinFit.perr[2][0], kinFit.perr[2][1])
-        fitDict["k_tilde_nu"] = (kinFit.popt[3], kinFit.perr[3][0], kinFit.perr[3][1])
+        fitDict["k_nu_tilde"] = (kinFit.popt[3], kinFit.perr[3][0], kinFit.perr[3][1])
         fitDict["p_nu"] = (kinFit.popt[4], kinFit.perr[4][0], kinFit.perr[4][1])
     
     return fitDict
@@ -264,7 +265,7 @@ def postPlot(plObj, spectType, showx=False, compensated=False):
         # ax.legend(loc='best')
     elif spectType == "vels":
         if compensated:
-            ylabel=r'$k^{(5/3)}P_\mathrm{kin}$'
+            ylabel=r'$k^{('+str(-p_kin)+')}\,P_\mathrm{kin}$'
         else:
             ylabel=r'$P_\mathrm{kin}$'
         if not showx:
@@ -295,7 +296,7 @@ def plotScaleLoc(plObj, solverFit, type):
         maxKNu = 0
         for solver in solverFit:
             val = solverFit[solver]
-            k_nu = val["k_tilde_nu"][0]**(1/val["p_nu"][0])
+            k_nu = val["k_nu_tilde"][0]**(1/val["p_nu"][0])
             print(f"Value of k_nu for {solver}: {k_nu}")
             ax.plot([k_nu, k_nu], [ylim[0], 2*ylim[0]], color=COLOR_DICT[solver], scaley=False)
             if k_nu > maxKNu:
@@ -335,7 +336,7 @@ def main(args):
             fit = True
             if not args.refit and os.path.exists(f"{args.o}/kinFitDict.pkl"):
                 fit = False
-            kinParams = {"A_kin": [-8, -5, -2], "p_bn": [0, 1, np.inf], "k_bn": [0.1, 4.0, 128], "k_tilde_nu": [0.1, 4.0, 128], "p_nu": [1, 1, 1+1e-6]}
+            kinParams = {"A_kin": [-8, -5, -2], "p_bn": [0, 1, np.inf], "k_bn": [0.1, 4.0, 128], "k_nu_tilde": [0.1, 4.0, 128], "p_nu": [1, 1, 1+1e-6]}
             if os.path.exists(args.fitFile[simList.index(simDir)]):
                 kinParams = txtToCfpDict(args.fitFile[simList.index(simDir)])
                 print("Using kin dict:", kinParams)
@@ -348,11 +349,11 @@ def main(args):
         dumpDict(solverKinFit, f"{args.o}/kinFitDict.pkl")
         plotScaleLoc(plKinObj, solverKinFit, "vels")
         if args.compensate:
-            cfp.plot(save=f"{args.o}/Compensated Kinetic Spectra.pdf", legend_loc="best", xlabel=xlabel, ylabel=ylabel)
-            # plKinObj.ax().figure.savefig(f"{args.o}/Compensated Kinetic Spectra.pdf")
+            cfp.plot(save=f"{args.o}/Compensated_Kinetic_Spectra.pdf", legend_loc="best", xlabel=xlabel, ylabel=ylabel)
+            # plKinObj.ax().figure.savefig(f"{args.o}/Compensated_Kinetic_Spectra.pdf")
         else:
-            cfp.plot(save=f"{args.o}/Kinetic Spectra.pdf", legend_loc="best", xlabel=xlabel, ylabel=ylabel)
-            # plKinObj.ax().figure.savefig(f"{args.o}/Kinetic Spectra.pdf")
+            cfp.plot(save=f"{args.o}/Kinetic_Spectra.pdf", legend_loc="best", xlabel=xlabel, ylabel=ylabel)
+            # plKinObj.ax().figure.savefig(f"{args.o}/Kinetic_Spectra.pdf")
         # plKinObj.ax().figure.clf(); plKinObj.ax().cla(); pl.close(); plKinObj = None
 
     
@@ -402,12 +403,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Automate production grade plots")
     parser.add_argument("-i", type=str, nargs="*", default=["/scratch/pawsey0810/jwatt/TurbulentDynamo/M0.01HighRes/HLLD", "/scratch/pawsey0810/jwatt/TurbulentDynamo/M0.01HighRes/BK"], help="Input Directories")
     parser.add_argument("-o", type=str, default="./", help="Output Directory")
-    parser.add_argument("-fitFile", type=str, default=["./HLLD_fit.txt", "./BK_fit.txt"], nargs="*", help="Initial fit file")
+    parser.add_argument("-fitFile", type=str, default=["./fit_HLLD.txt", "./fit_BK.txt"], nargs="*", help="Initial fit file")
     parser.add_argument("-kin_spect", action="store_true", help="Generate kinetic spectra")
     parser.add_argument("-cur_spect", action="store_true", help="Generate current spectra")
     parser.add_argument("-mag_spect", action="store_true", help="Generate magnetic spectra")
     parser.add_argument("-kin_plot", action="store_true", help="Plot kinetic spectra")
-    parser.add_argument("-compensate", action="store_true", help="Compensate for k^(5/3). Works only for the kinetic spectra.")
+    parser.add_argument("-compensate", action="store_true", help="Compensate with k^("+str(-p_kin)+"). Works only for the kinetic spectra.")
     parser.add_argument("-cur_plot", action="store_true", help="Plot current spectra")
     parser.add_argument("-mag_plot", action="store_true", help="Plot magnetic spectra")
     parser.add_argument("-v", type=int, default=2, help="Verbose")

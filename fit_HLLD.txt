@@ -1,5 +1,5 @@
 A_kin:-inf,0,inf
-p_bn:0.99,1,1.01
-k_bn:3,5,10
-k_nu_tilde:1,10,20
+p_bn:-inf,-inf,-1e99
+k_bn:1,1,1.01
+k_nu_tilde:3,10,20
 p_nu:0.99,1,1.01

@@ -53,14 +53,14 @@ def main(args):
         k_bn = kinFit["k_bn"][0]
         k_bn_pos_er = kinFit["k_bn"][2]
         k_bn_neg_er = kinFit["k_bn"][1]
-        k_tilde_nu = kinFit["k_tilde_nu"][0]
-        k_tilde_nu_pos_er = kinFit["k_tilde_nu"][2]
-        k_tilde_nu_neg_er = kinFit["k_tilde_nu"][1]
-        k_tilde_nu_pos = k_tilde_nu + k_tilde_nu_pos_er
-        k_tilde_nu_neg = k_tilde_nu + k_tilde_nu_neg_er
-        k_nu = k_tilde_nu**(1/p_nu)
-        k_nu_pos = max(k_tilde_nu_pos**(1/p_nu_neg), k_tilde_nu_pos**(1/p_nu_pos), k_tilde_nu_neg**(1/p_nu_neg), k_tilde_nu_neg**(1/p_nu_pos))
-        k_nu_neg = min(k_tilde_nu_pos**(1/p_nu_neg), k_tilde_nu_pos**(1/p_nu_pos), k_tilde_nu_neg**(1/p_nu_neg), k_tilde_nu_neg**(1/p_nu_pos))
+        k_nu_tilde = kinFit["k_nu_tilde"][0]
+        k_nu_tilde_pos_er = kinFit["k_nu_tilde"][2]
+        k_nu_tilde_neg_er = kinFit["k_nu_tilde"][1]
+        k_nu_tilde_pos = k_nu_tilde + k_nu_tilde_pos_er
+        k_nu_tilde_neg = k_nu_tilde + k_nu_tilde_neg_er
+        k_nu = k_nu_tilde**(1/p_nu)
+        k_nu_pos = max(k_nu_tilde_pos**(1/p_nu_neg), k_nu_tilde_pos**(1/p_nu_pos), k_nu_tilde_neg**(1/p_nu_neg), k_nu_tilde_neg**(1/p_nu_pos))
+        k_nu_neg = min(k_nu_tilde_pos**(1/p_nu_neg), k_nu_tilde_pos**(1/p_nu_pos), k_nu_tilde_neg**(1/p_nu_neg), k_nu_tilde_neg**(1/p_nu_pos))
         k_nu_pos_er = k_nu_pos - k_nu
         k_nu_neg_er = k_nu_neg - k_nu
 
