@@ -13,7 +13,7 @@ def getSolverSortedList(pathList):
         infoDict = getInfoDict(sim)
         order.append(ORDER_DICT[infoDict["solver"]])
     srt = np.argsort(np.array(order))
-    return [cleanPathList[i] for i in srt]
+    return [cleanPathList[i] for i in srt], srt
 
 def txtToCfpDict(path):
     with open(path, "r") as f:
@@ -67,6 +67,10 @@ def argsToOutdirName(args):
         + str(args.v)
         + "_auto-adj"
         + str(args.auto_adjust)
+        + "_eos-"
+        + str(args.eos)
+        + "_gamma-"
+        + str(args.gamma)
         + "_visc-"
         + str(args.useVisc)
         + "_Re-"

@@ -163,8 +163,8 @@ def plotSpectra(simDir, verbose, spectType, fact, infoDict, params, outdir, comp
     k = averDf['k']
     err = np.array([pTot * np.log(10) * deltaLog10PTot, pTot * np.log(10) * deltaLog10PTot])
     
-    kFitMin = 3
-    kFitMax = max(k) / 2
+    kFitMin = 4
+    kFitMax = max(k) / 4
     kFit = np.array(k[(k >= kFitMin) & (k <= kFitMax)].tolist())
     log10PTotFit = np.array(log10PTot[(k >= kFitMin) & (k <= kFitMax)].tolist())
     deltaLog10PTotFit = np.array(deltaLog10PTot[(k >= kFitMin) & (k <= kFitMax)].tolist())
@@ -177,10 +177,7 @@ def plotSpectra(simDir, verbose, spectType, fact, infoDict, params, outdir, comp
         compensateFact = 1
         compensateFitFact = 1
 
-    if compensate and spectType == "vels":
-        plObj = cfp.plot(compensateFact * fact * pTot, k, yerr=fact * err * np.array([compensateFact, compensateFact]), shaded_err=True, label=SOLVER_DICT[infoDict['solver']], color=COLOR_DICT[infoDict['solver']])
-    else:
-        plObj = cfp.plot(compensateFact * fact * pTot, k, yerr=fact * err, shaded_err=True, label=SOLVER_DICT[infoDict['solver']], color=COLOR_DICT[infoDict['solver']])
+    plObj = cfp.plot(compensateFact * fact * pTot, k, yerr=fact * err * np.array([compensateFact, compensateFact]).reshape(2, 1), shaded_err=True, label=SOLVER_DICT[infoDict['solver']], color=COLOR_DICT[infoDict['solver']])
 
     if fit:
         fitDict = {}
@@ -191,6 +188,7 @@ def plotSpectra(simDir, verbose, spectType, fact, infoDict, params, outdir, comp
             # cfp.plot(compensateFitFact * fact * 10**Log10_P_mag(kFit, *(fitDict["A_mag"][0], fitDict["p_mag"][0], fitDict["p_eta"][0], fitDict["k_tilde_eta"][0])), kFit, color="black")
         elif spectType == "vels":
             fitDict = loadDict(f"{outdir}/kinFitDict.pkl")[infoDict['solver']]
+            cfp.plot(compensateFitFact * fact * 10**Log10_P_kin(kFit, *(fitDict["A_kin"][0], fitDict["p_bn"][0], fitDict["k_bn"][0], fitDict["k_nu_tilde"][0]), fitDict["p_nu"][0]), kFit, color="black")
             cfp.plot(compensateFitFact * fact * 10**Log10_P_kin(kFit, *(fitDict["A_kin"][0], fitDict["p_bn"][0], fitDict["k_bn"][0], fitDict["k_nu_tilde"][0]), fitDict["p_nu"][0]), kFit, color="black")
         elif spectType == "cur":
             fitDict = loadDict(f"{outdir}/curFitDict.pkl")[infoDict['solver']]
@@ -246,10 +244,12 @@ def fit_func(spectType, simDir, kFit, log10PTotFit, deltaLog10PTotFit, params, c
         fitDict["p_bn"] = (kinFit.popt[1], kinFit.perr[1][0], kinFit.perr[1][1])
         fitDict["k_bn"] = (kinFit.popt[2], kinFit.perr[2][0], kinFit.perr[2][1])
         fitDict["k_nu_tilde"] = (kinFit.popt[3], kinFit.perr[3][0], kinFit.perr[3][1])
+        fitDict["k_nu_tilde"] = (kinFit.popt[3], kinFit.perr[3][0], kinFit.perr[3][1])
         fitDict["p_nu"] = (kinFit.popt[4], kinFit.perr[4][0], kinFit.perr[4][1])
     
     return fitDict
 
+def postPlot(plObj, spectType, showx=False, compensated=False):
 def postPlot(plObj, spectType, showx=False, compensated=False):
     ax = plObj.ax()
     ax.set_xscale('log')
@@ -266,8 +266,11 @@ def postPlot(plObj, spectType, showx=False, compensated=False):
     elif spectType == "vels":
         if compensated:
             ylabel=r'$k^{('+str(-p_kin)+')}\,P_\mathrm{kin}$'
+            ylabel=r'$k^{('+str(-p_kin)+')}\,P_\mathrm{kin}$'
         else:
             ylabel=r'$P_\mathrm{kin}$'
+        if not showx:
+            ax.get_xaxis().set_ticks([])
         if not showx:
             ax.get_xaxis().set_ticks([])
         # ax.legend(loc='best')
@@ -297,6 +300,7 @@ def plotScaleLoc(plObj, solverFit, type):
         for solver in solverFit:
             val = solverFit[solver]
             k_nu = val["k_nu_tilde"][0]**(1/val["p_nu"][0])
+            k_nu = val["k_nu_tilde"][0]**(1/val["p_nu"][0])
             print(f"Value of k_nu for {solver}: {k_nu}")
             ax.plot([k_nu, k_nu], [ylim[0], 2*ylim[0]], color=COLOR_DICT[solver], scaley=False)
             if k_nu > maxKNu:
@@ -313,7 +317,8 @@ def plotScaleLoc(plObj, solverFit, type):
 
 def main(args):
 
-    simList = getSolverSortedList(args.i)
+    simList, srt = getSolverSortedList(args.i)
+    args.fitFile = np.array(args.fitFile)[srt]
 
     if args.kin_spect:
         for sim in simList:
@@ -343,8 +348,11 @@ def main(args):
             elif os.path.exists(simDir+"/spectra/kinFitInit.txt"):
                 kinParams = txtToCfpDict(simDir+"/spectra/kinFitInit.txt")
                 print("Using kin dict:", kinParams)
+            else:
+                print("Using default kin dict")
             plKinObj, fitDict = plotSpectra(simDir, 1, "vels", fact, infoDict, kinParams, args.o, compensate=args.compensate, fit=fit)
             solverKinFit[infoDict['solver']] = fitDict
+        xlabel, ylabel=postPlot(plKinObj, "vels", args.showx, args.compensate)
         xlabel, ylabel=postPlot(plKinObj, "vels", args.showx, args.compensate)
         dumpDict(solverKinFit, f"{args.o}/kinFitDict.pkl")
         plotScaleLoc(plKinObj, solverKinFit, "vels")
@@ -375,7 +383,7 @@ def main(args):
             postPlot(plMagObj, "mags", args.showx)
         dumpDict(solverMagFit, f"{args.o}/magFitDict.pkl")
         plotScaleLoc(plMagObj, solverMagFit, "mags")
-        plMagObj.ax().figure.savefig(f"{args.o}/Magnetic Spectra.pdf")
+        plMagObj.ax().figure.savefig(f"{args.o}/Magnetic_Spectra{args.oname}.pdf")
         plMagObj.ax().figure.clf(); plMagObj.ax().cla(); pl.close(); plMagObj = None
 
     if args.cur_plot:
@@ -394,7 +402,7 @@ def main(args):
             postPlot(plCurObj, "cur", args.showx)
         dumpDict(solverCurFit, f"{args.o}/curFitDict.pkl")
         plotScaleLoc(plCurObj, solverCurFit, "cur")
-        plCurObj.ax().figure.savefig(f"{args.o}/Current Spectra.pdf")
+        plCurObj.ax().figure.savefig(f"{args.o}/Current_Spectra{args.oname}.pdf")
         plCurObj.ax().figure.clf(); plCurObj.ax().cla(); pl.close(); plCurObj = None
 
 
@@ -408,6 +416,7 @@ if __name__ == "__main__":
     parser.add_argument("-cur_spect", action="store_true", help="Generate current spectra")
     parser.add_argument("-mag_spect", action="store_true", help="Generate magnetic spectra")
     parser.add_argument("-kin_plot", action="store_true", help="Plot kinetic spectra")
+    parser.add_argument("-compensate", action="store_true", help="Compensate with k^("+str(-p_kin)+"). Works only for the kinetic spectra.")
     parser.add_argument("-compensate", action="store_true", help="Compensate with k^("+str(-p_kin)+"). Works only for the kinetic spectra.")
     parser.add_argument("-cur_plot", action="store_true", help="Plot current spectra")
     parser.add_argument("-mag_plot", action="store_true", help="Plot magnetic spectra")

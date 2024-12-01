@@ -9,7 +9,7 @@ def main(args):
 
     scriptDir = pathlib.Path(__file__).parent.resolve()
     pathList = [args.i+_ for _ in os.listdir(args.i)]
-    simList = utils.getSolverSortedList(pathList)
+    simList, _ = utils.getSolverSortedList(pathList)
     sims = " ".join(simList)
 
 

@@ -26,6 +26,8 @@ def argsToOtherSetupParams(args):
         otherParams += " +viscosity"
     if args.useMgRes == "true":
         otherParams += " +resistivity"
+    if args.eos == "iso":
+        otherParams += " +eos_isothermal"
     return otherParams
 
 
@@ -105,8 +107,9 @@ def createSimulationObjectDirectory(args):
         + " +ug "
         + solverSetupParams
         + otherParams
-        + " +stir_ics +polytropic_eos -parfile=flash.par.james"
+        + " +stir_ics -parfile=flash.par.james -debug"
     )
+    print("Running:", createSimulationCmd)
     os.system(createSimulationCmd)
 
 
@@ -121,6 +124,7 @@ def createInfoDumpFile(args):
     infoDict["Re"] = args.Re
     infoDict["useMgRes"] = args.useMgRes
     infoDict["Prm"] = args.Prm
+    infoDict["eos"] = args.eos
     infoDict["solver"] = args.solver
     if args.solver == "bk-usm":
         infoDict["mcut"] = args.mcut
@@ -149,6 +153,11 @@ def createFlashPar(args):
     tmax = args.nt * turnOverTime
     checkpointFileIntervalTime = args.dt * turnOverTime
     plotFileIntervalTime = args.dt * turnOverTime
+
+    if args.eos == "iso":
+        isoConst = "IsothermalKonst= 1.0 # (cs^2)"
+    else:
+        isoConst = ""
 
     flashParFile = open(utils.argsToOutdirName(args) + "/flash.par", "w")
 
@@ -263,8 +272,11 @@ def createFlashPar(args):
     plot_var_5      = "magx"
     plot_var_6      = "magy"
     plot_var_7      = "magz"
+    plot_var_8      = "pres"
+    {'plot_var_9 = "temp"' if args.eos == "gamma" else ''}
 
-    gamma           = 1.0001
+    {f'gamma = {args.gamma}' if args.eos == "gamma" else ''}
+    {isoConst}
     eintSwitch      = 0
     cfl             = {args.cfl}
     nend            = 1000000
@@ -273,21 +285,6 @@ def createFlashPar(args):
     flux_correct          = .true.
     killdivb              = .true.
     UnitSystem            = "CGS"
-
-    # polytropic EOS
-    usePolytrope         = .true.
-    IsothermalKonst      = 1.0 # (cs^2)
-    polytropeKonst       = 1.0 # (cs^2)
-    polytropeGamma1      = 1.0
-    polytropeGamma2      = 1.0
-    polytropeGamma3      = 1.0
-    polytropeGamma4      = 1.0
-    polytropeGamma5      = 1.0
-    polytropeDens1       = 1e-99
-    polytropeDens2       = 1e99
-    polytropeDens3       = 1e99
-    polytropeDens4       = 1e99
-    polytropeDens5       = 1e99
 
     #   AMR refinement parameters
     # lrefine_min = 1
@@ -335,8 +332,8 @@ def createTurbGenPar(args):
     # ********************************************************************************
     ndim               = 3              # N-dimensional turbulence driving (1 or 2 or 3).
                                         # Note that ndim = 1.5 or 2.5 will create 2 or 3 vector field components, respectively.
-    L                  = {args.L}            # Length of simulation domain (box) in [x[y[z]] (can be comma-separated list to set each component).
-    velocity           = {args.v}            # Target turbulent velocity dispersion.
+    L                  = {args.L}       # Length of simulation domain (box) in [x[y[z]] (can be comma-separated list to set each component).
+    velocity           = {args.v}       # Target turbulent velocity dispersion.
                                         # The following parameters (ampl_factor) is used to adjust the driving amplitude in [x[y[z]],
                                         # to approach the desired target velocity dispersion. Note that it scales as velocity/velocity_measured,
                                         # e.g., given a target velocity dispersion of 'velocity' and a measured velocity dispersion of 'velocity_measured',
@@ -429,6 +426,8 @@ if __name__ == "__main__":
         type=int,
         help="Automatically adjust the velocity amplitude",
     )
+    parser.add_argument("-eos", type=str, default="gamma", choices=["gamma", "iso"], help="EOS")
+    parser.add_argument("-gamma", default=1.0001, type=float, help="Gamma")
     parser.add_argument("-useVisc", default="false", type=str, help="Use viscosity")
     parser.add_argument("-Re", default=1000, type=float, help="Reynolds number")
     parser.add_argument("-useMgRes", default="false", type=str, help="Use magnetic resistivity")

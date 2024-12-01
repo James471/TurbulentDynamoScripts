@@ -84,7 +84,12 @@ def main(args):
 
     axRatio.set_yscale("log")
 
-    simList = getSolverSortedList(args.i)
+    simList, srt = getSolverSortedList(args.i)
+    args.lf = np.array(args.lf)[srt]
+    args.uf = np.array(args.uf)[srt]
+    args.sr = np.array(args.sr)[srt]
+    args.stf = np.array(args.stf)[srt]
+    args.sbs = np.array(args.sbs)[srt]
 
     fitDict = {}
 
