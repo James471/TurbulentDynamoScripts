@@ -31,9 +31,9 @@ def main(args):
     coef_pos = coef + coef_pos_er
     coef_neg = coef + coef_neg_er
 
-    solverKinFit = loadDict(f"{args.i}/kinFitDict.pkl")
-    solverCurFit = loadDict(f"{args.i}/curFitDict.pkl")
-    growthDict   = loadDict(f"{args.i}/growthDict.pkl")
+    solverKinFit = loadDict(f"{args.dict}/kinFitDict.pkl")
+    solverCurFit = loadDict(f"{args.dict}/curFitDict.pkl")
+    growthDict   = loadDict(f"{args.dict}/growthDict.pkl")
 
     for solver in solverList:
         if solver not in solverKinFit or solver not in solverCurFit:
@@ -118,7 +118,7 @@ def main(args):
     {table1Data}
     \\hline
     \\end{{tabular}}
-    \\caption{{All parameters were measured/derived by averaging over the kinematic phase of the dynamo when $t>5t_\\mathrm{{turb}}$ and $10^{{-7}}\\le E_\\mathrm{{mag}}/E_\\mathrm{{kin}} \\le 10^{{-3}}$. Columns: \\textbf{{(1)}} Name of the numerical scheme as described in Table~\\ref{{tab:solvers}}. \\textbf{{(2)}} Exponent of the power law part of the kinetic spectra. \\textbf{{3}} Average value of the ratio of the magnetic energy to the kinetic energy in the saturation phase of the dynamo $(t>60t_\\mathrm{{turb}})$. \\textbf{{(4)}} Exponent of the bottleneck effect. \\textbf{{(5)}} Scaling wave number of the bottleneck effect. \\textbf{{(6)}} Viscous dissipation wave number. \\textbf{{(7)}} Resistive dissipation wave number.}}
+    \\caption{{All parameters were measured/derived by averaging over the kinematic phase of the dynamo when $t>3t_\\mathrm{{turb}}$ and $10^{{-5}}\\le E_\\mathrm{{mag}}/E_\\mathrm{{kin}} \\le 10^{{-3}}$. Columns: \\textbf{{(1)}} Name of the numerical scheme as described in Table~\\ref{{tab:solvers}}. \\textbf{{(2)}} Exponent of the power law part of the kinetic spectra. \\textbf{{3}} Average value of the ratio of the magnetic energy to the kinetic energy in the saturation phase of the dynamo $(t>60t_\\mathrm{{turb}})$. \\textbf{{(4)}} Exponent of the bottleneck effect. \\textbf{{(5)}} Scaling wave number of the bottleneck effect. \\textbf{{(6)}} Viscous dissipation wave number. \\textbf{{(7)}} Resistive dissipation wave number.}}
     \\label{{tab:Turbulent dynamo fit parameters}}
     \\end{{table*}}
     '''
@@ -150,8 +150,11 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Automate table creation")
     parser.add_argument("-i", type=str, help="Input Directory")
+    parser.add_argument("-dict", type=str, help="Dictionary file location")
 
 
     args = parser.parse_args()
+    if args.dict is None:
+        args.dict = args.i
 
     main(args)
