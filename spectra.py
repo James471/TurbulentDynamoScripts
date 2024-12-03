@@ -53,7 +53,7 @@ def Log10_P_mag(k, A_mag, p_mag, p_eta, k_tilde_eta):
 def generateSpectra(simDir, verbose, spectType, infoDict, lf, uf, stf, nProcs=1):
     '''
     verbose  : Could be 0 or 1 or 2
-    spectType: Could be 'vels' or 'curr' or 'mags'
+    spectType: Could be 'vels' or 'curr' or 'mags' or 'vort'
     '''
 
     if verbose == 2:
@@ -109,6 +109,16 @@ def generateSpectra(simDir, verbose, spectType, infoDict, lf, uf, stf, nProcs=1)
             else:
                 derivCmd = f"mpirun -np {nProcs} /home/100/jw5893/flash-tools/tools/derivative_var/derivative_var {f} -current {devNull}"
             os.system(derivCmd)
+    elif spectType == "vort":
+        types = "0 -dsets vorticity_x vorticity_y vorticity_z"
+        for x in range(dumpNStart, dumpNEnd+1):
+            if verbose > 0: print("Adding vorticity variable to dump:", x)
+            f = simDir+"/Turb_hdf5_plt_cnt_{:04d}".format(x)
+            if "nid" in socket.gethostname():
+                derivCmd = f"srun -n {nProcs} /software/projects/pawsey0810/jwatt/flash-tools/tools/derivative_var/derivative_var {f} -vort {devNull}"
+            else:
+                derivCmd = f"mpirun -np {nProcs} /home/100/jw5893/flash-tools/tools/derivative_var/derivative_var {f} -vort {devNull}"
+            os.system(derivCmd)
     elif spectType == "vels":
         types = "1"
     elif spectType == "mags":
@@ -120,6 +130,8 @@ def generateSpectra(simDir, verbose, spectType, infoDict, lf, uf, stf, nProcs=1)
         spectFileString = "mags"
     elif spectType == "vels":
         spectFileString = "vels"
+    elif spectType == "vort":
+        spectFileString = "dset_vorticity_x_vorticity_y_vorticity_z"
 
     for x in range(dumpNStart, dumpNEnd+1):
         if verbose > 0: print("Processing dump to generate spectra:", x)
@@ -135,7 +147,7 @@ def generateSpectra(simDir, verbose, spectType, infoDict, lf, uf, stf, nProcs=1)
 
     spectFiles = [simDir+"/spectra/Turb_hdf5_plt_cnt_{:04d}".format(x)+"_spect_"+spectFileString+".dat" for x in range(dumpNStart, dumpNEnd+1)]
     if spectType == "vels": normalise = False
-    if spectType == "mags" or spectType == "cur": normalise = True # normalise magnetic spectra and current spectra before averaging, because of field growth with time
+    if spectType == "mags" or spectType == "cur" or spectType == "vort": normalise = True # normalise magnetic spectra and current spectra before averaging, because of field growth with time
     averDat, headerAver = tl.aver_spect(spectFiles, normalise=normalise, verbose=0)
     outfile = simDir+"/spectra/aver_spect_"+spectFileString+".dat"
     tl.write_spect(outfile, averDat, headerAver, verbose=verbose)
@@ -158,6 +170,8 @@ def plotSpectra(ax, simDir, verbose, spectType, fact, infoDict, params, outdir, 
         spectVar = "vels"
     elif spectType == "cur":
         spectVar = "dset_curx_cury_curz"
+    elif spectType == "vort":
+        spectVar = "dset_vorticity_x_vorticity_y_vorticity_z"
 
     averFile = simDir + f"/spectra/aver_spect_{spectVar}.dat"
     averDf   = pd.read_csv(averFile, sep="\s+", header=0, skiprows=5)
@@ -194,6 +208,8 @@ def plotSpectra(ax, simDir, verbose, spectType, fact, infoDict, params, outdir, 
             ax.plot(kFit, compensateFitFact * fact * 10**Log10_P_kin(kFit, fitDict["A_kin"][0], fitDict["p_bn"][0], fitDict["k_bn"][0], fitDict["k_nu_tilde"][0], fitDict["p_nu"][0]), color="black")
         elif spectType == "cur":
             fitDict = loadDict(f"{outdir}/curFitDict.pkl")[infoDict['solver']]
+        elif spectType == "vort":
+            fitDict = loadDict(f"{outdir}/vortFitDict.pkl")[infoDict['solver']]
 
     return fitDict
 
@@ -203,6 +219,12 @@ def fit_func(ax, spectType, simDir, kFit, log10PTotFit, deltaLog10PTotFit, param
     if spectType == "mags":
         fitDict["A_mag"] = (0,0,0)
         fitDict["p_mag"] = (0,0,0)
+        fitDict["p_eta"] = (0,0,0)
+        fitDict["k_tilde_eta"] = (0,0,0)
+
+    elif spectType == "vort":
+        fitDict["A_vort"] = (0,0,0)
+        fitDict["p_vort"] = (0,0,0)
         fitDict["p_eta"] = (0,0,0)
         fitDict["k_tilde_eta"] = (0,0,0)
 
@@ -277,6 +299,11 @@ def postPlot(ax, spectType, showx=False, compensated=False):
             ax.set_xticklabels([])
         # ax.set_xlabel(r'$k$')
         # ax.legend(loc='best')
+    elif spectType == "vort":
+        ylabel=r'$P_\mathrm{vort}$'
+        ax.set_ylabel(ylabel)
+        if not showx:
+            ax.set_xticklabels([])
     elif spectType == "vels":
         if compensated:
             ylabel=r'$k^{('+str(-p_kin)+')}\,P_\mathrm{kin}$'
@@ -306,6 +333,9 @@ def plotScaleLoc(ax, solverFit, type, color_dict, printvals=True):
         #     if val["k_tilde_eta"][0]**(1/val["p_eta"][0]) > maxKEta:
         #         maxKEta = val["k_tilde_eta"][0]**(1/val["p_eta"][0])
         # ax.text(maxKEta, 2.5*ylim[0], r"$k_\eta$", color="black")
+    elif type == "vort":
+        ax.plot([10, 10], [ylim[0], 2*ylim[0]], color="white", scaley=False)
+        ax.text(10, 2.5*ylim[0], r"$k_\nu$", color="white")
     elif type == "vels":
         maxKNu = 0
         for solver in solverFit:
@@ -344,9 +374,11 @@ def main(config):
     kin_spect = config['common'].getboolean('kin_spect')
     cur_spect = config['common'].getboolean('cur_spect')
     mag_spect = config['common'].getboolean('mag_spect')
+    vort_spect = config['common'].getboolean('vort_spect')
     kin_plot = config['common'].getboolean('kin_plot')
     cur_plot = config['common'].getboolean('cur_plot')
     mag_plot = config['common'].getboolean('mag_plot')
+    vort_plot = config['common'].getboolean('vort_plot')
     verbose = config['common'].getint('verbose')
     lf = config['common'].getfloat('lf')
     uf = config['common'].getfloat('uf')
@@ -377,6 +409,9 @@ def main(config):
     if mag_spect:
         for sim in sim_list:
             generateSpectra(sim, verbose, "mags", getInfoDict(sim), lf, uf, stf, n)
+    if vort_spect:
+        for sim in sim_list:
+            generateSpectra(sim, verbose, "vort", getInfoDict(sim), lf, uf, stf, n)
 
 
     if kin_plot:
@@ -415,7 +450,6 @@ def main(config):
         ax_kin_obj.set_ylabel(ylabel)
         ax_kin_obj_comp.set_xlabel(xlabel_comp)
         ax_kin_obj_comp.set_ylabel(ylabel_comp)
-        ax_kin_obj.legend(loc="best")
         ax_kin_obj_comp.legend(loc="best")
         print("Saving Kinetic Spectra")
         ax_kin_obj.figure.savefig(f"{output_dir}/Kinetic_Spectra{oname}.pdf")
@@ -442,7 +476,6 @@ def main(config):
         xlabel, ylabel = postPlot(ax_mag_obj, "mags", showx)
         dumpDict(solverMagFit, f"{output_dir}/magFitDict.pkl")
         plotScaleLoc(ax_mag_obj, solverMagFit, "mags", color_dict=color_dict)
-        ax_mag_obj.legend(loc="best")
         ax_mag_obj.set_xlabel(xlabel)
         ax_mag_obj.set_ylabel(ylabel)
         print("Saving Magnetic Spectra")
@@ -466,11 +499,34 @@ def main(config):
         xlabel, ylabel = postPlot(ax_cur_obj, "cur", showx)
         dumpDict(solverCurFit, f"{output_dir}/curFitDict.pkl")
         plotScaleLoc(ax_cur_obj, solverCurFit, "cur", color_dict=color_dict)
-        ax_cur_obj.legend(loc="best")
         ax_cur_obj.set_xlabel(xlabel)
         ax_cur_obj.set_ylabel(ylabel)
         print("Saving Current Spectra")
         ax_cur_obj.figure.savefig(f"{output_dir}/Current_Spectra{oname}.pdf")
+
+    
+    if vort_plot:
+        solverVortFit = {}
+        fig, ax_vort_obj = pl.subplots()
+        for index, sim_dir in enumerate(sim_list):
+            infoDict = getInfoDict(sim_dir)
+            if no_shift:
+                fact = 1
+            else:
+                fact = factor_list[index]
+            fit = True
+            if not refit and os.path.exists(f"{output_dir}/vortFitDict.pkl"):
+                fit = False
+            vortParams = {"A_vort": [0, 0.0001, np.inf], "p_vort": [0, 1, np.inf], "p_eta": [0, 1, np.inf], "k_tilde_eta": [0, 4.0, 128]}
+            fitDict = plotSpectra(ax_vort_obj, sim_dir, 1, "vort", fact, infoDict, vortParams, output_dir, compensate=False, fit=fit, color=color_list[index], label=label_list[index])
+            solverVortFit[infoDict['solver']] = fitDict
+        xlabel, ylabel = postPlot(ax_vort_obj, "vort", showx)
+        dumpDict(solverVortFit, f"{output_dir}/vortFitDict.pkl")
+        plotScaleLoc(ax_vort_obj, solverVortFit, "vort", color_dict=color_dict)
+        ax_vort_obj.set_xlabel(xlabel)
+        ax_vort_obj.set_ylabel(ylabel)
+        print("Saving Vorticity Spectra")
+        ax_vort_obj.figure.savefig(f"{output_dir}/Vorticity_Spectra{oname}.pdf")
 
 
 if __name__ == "__main__":

@@ -102,7 +102,7 @@ def main(args):
         sat_neg_er = growthDict[solver]["sat"][1]
         sat_pos_er = growthDict[solver]["sat"][2]
 
-        table1Data += f"{SOLVER_DICT[solver]} & ${tau:.3f}^{{+{tau_pos_er:.3f}}}_{{{tau_neg_er:.3f}}}$ & ${sat:.2f}^{{+{sat_pos_er:.2f}}}_{{{sat_neg_er:.2f}}}$ & ${p_bn:.2f}^{{+{p_bn_pos_er:.2f}}}_{{{p_bn_neg_er:.2f}}}$ & ${k_bn:.1f}^{{+{k_bn_pos_er:.1f}}}_{{{k_bn_neg_er:.1f}}}$ & ${k_nu:.2f}^{{+{k_nu_pos_er:.2f}}}_{{{k_nu_neg_er:.2f}}}$ &  ${k_eta:.1f}^{{+{k_eta_pos_er:.1f}}}_{{{k_eta_neg_er:.1f}}}$ \\\\ \n"
+        table1Data += f"{SOLVER_DICT[solver]} & ${tau:.3f}^{{+{tau_pos_er:.3f}}}_{{{tau_neg_er:.3f}}}$ & ${sat:.2f}^{{+{sat_pos_er:.2f}}}_{{{sat_neg_er:.2f}}}$ & ${p_bn:.2f}^{{+{p_bn_pos_er:.2f}}}_{{{p_bn_neg_er:.2f}}}$ & ${k_bn:.2f}^{{+{k_bn_pos_er:.2f}}}_{{{k_bn_neg_er:.2f}}}$ & ${k_nu:.2f}^{{+{k_nu_pos_er:.2f}}}_{{{k_nu_neg_er:.2f}}}$ &  ${k_eta:.1f}^{{+{k_eta_pos_er:.1f}}}_{{{k_eta_neg_er:.1f}}}$ \\\\ \n"
         table2Data += f"{SOLVER_DICT[solver]} & ${getNum(Re)}\\times10^{{{getPwr(Re)}}}$ & ${getNum(Rm)}\\times10^{{{getPwr(Rm)}}}$ & ${getNum(Pm)}$\\\\ \n"
 
     table1Str = f'''
@@ -110,7 +110,7 @@ def main(args):
     \\centering
     \\setlength{{\\tabcolsep}}{{1.8pt}}
     \\renewcommand{{\\arraystretch}}{{1.5}}
-    \\begin{{tabular}}{{ccccccccc}}
+    \\begin{{tabular}}{{lcccccccc}}
     \\hline
     Name & $\\Gamma(t_\\mathrm{{turb}}^{{-1}})$ & $(E_\\mathrm{{M  }}/E_\\mathrm{{K}})_\\mathrm{{sat}}$ & $p_\\mathrm{{bn}}$ & $k_\\mathrm{{bn}}$ & ${{k}}_\\mathrm{{\\nu}}$ & $k_\\mathrm{{\\eta}}$\\\\
     (1) & (2) & (3) & (4) & (5) & (6) & (7)\\\\
@@ -139,10 +139,10 @@ def main(args):
     \\label{{tab:Turbulent dynamo effective flow numbers}}
     \\end{{table*}}
     '''
-    table1File = open("Table1.txt", "w")
+    table1File = open(f"{args.o}/Table1.txt", "w")
     table1File.write(table1Str)
     table1File.close()
-    table2File = open("Table2.txt", "w")
+    table2File = open(f"{args.o}/Table2.txt", "w")
     table2File.write(table2Str)
     table2File.close()
 
@@ -151,6 +151,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Automate table creation")
     parser.add_argument("-i", type=str, help="Input Directory")
     parser.add_argument("-dict", type=str, help="Dictionary file location")
+    parser.add_argument("-o", type=str, help="Output Directory")
 
 
     args = parser.parse_args()
