@@ -106,7 +106,7 @@ def main(args):
         label = SOLVER_DICT[infoDict["solver"]]
         color = COLOR_DICT[infoDict["solver"]]
         print(f"Processing {label}")
-        n = getNForTurbDat(file, res=5e-3)
+        n, stop = getNForTurbDat(file, res=5e-3)
         name = "/Turb.dat_cleaned" if os.path.exists(file + "/Turb.dat_cleaned") else "/Turb.dat"
         fit = addPlot(axMach, axRatio, loadFile(file + name, args.sr[index], n), label, color, args.lf[index], 
                       args.uf[index], velocity, args.stf[index], args.sbs[index], fitMethod, 

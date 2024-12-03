@@ -10,12 +10,11 @@ import h5py
 from decimal import Decimal
 from ipdb import set_trace as stop
 
-from myconfig import *
 from datautils import *
 from constants import *
 from utils import *
+from myconfig import *
 
-sys.path.append("PYTHON_PATH")
 import flashlib
 
 
@@ -33,11 +32,14 @@ Y_TICK_DICT = {"Split-Roe": None, "Split-Bouchut": "\"\"", "USM-Roe": "\"\"",
 
 
 
-def getSnapshotInfo(turbFile, velocity, r, stf, lf, simDir, type):
+def getSnapshotInfo(turbFile, velocity, val, usetime, stf, lf, simDir, type):
     t = getNonDimensionalTime(turbFile, velocity)
     ratio = getEMagOverEKin(turbFile)
     transientMask = (t > stf) & (ratio > lf)
-    location = np.argmin(np.abs(ratio[transientMask] - r))
+    if usetime:
+        location = np.argmin(np.abs(t[transientMask] - val))
+    else:
+        location = np.argmin(np.abs(ratio[transientMask] - val))
     snapshotTime = t[transientMask][location]
 
     plotFileList = [f for f in os.listdir(simDir) if f.startswith("Turb_hdf5_plt_cnt_")]
@@ -64,7 +66,7 @@ def getSnapshotInfo(turbFile, velocity, r, stf, lf, simDir, type):
     return plotFile, eTot
 
 
-def makePlots(simDirList, type, stream_var, r, stf, lf, outdir, cbar_type, redo, fontsize=1, clow=None, chigh=None):
+def makePlots(simDirList, type, stream_var, val, stf, lf, outdir, cbar_type, redo, usetime=False, fontsize=1, clow=None, chigh=None):
     
     plotFileDict = {}
     boundDict = {}
@@ -89,11 +91,11 @@ def makePlots(simDirList, type, stream_var, r, stf, lf, outdir, cbar_type, redo,
             print(f"Processing for {solver}")
 
             print("Loading Turb.dat")
-            n = getNForTurbDat(simDir, res=5e-2)
-            turbFile = loadFile(simDir + "/Turb.dat", 10, n)
+            n, s = getNForTurbDat(simDir, res=5e-1, stop=10)
+            turbFile = loadFile(simDir + "/Turb.dat", 10, n, s)
             print("Loaded Turb.dat")
 
-            plotFile, eTot = getSnapshotInfo(turbFile, velocity, r, stf[index], lf[index], simDir, type)
+            plotFile, eTot = getSnapshotInfo(turbFile, velocity, val, usetime, stf[index], lf[index], simDir, type)
             plotFile = simDir + "/" + plotFile
             if type == 'mag':
                 plotFileDict[solver] = {"plotFile": plotFile, "eMagTot": eTot}
@@ -150,6 +152,8 @@ def makePlots(simDirList, type, stream_var, r, stf, lf, outdir, cbar_type, redo,
     else:
         vmax = chigh
     cbarCmd = f'python3 {PYTHON_PATH}/flashplotlib.py -fontsize {fontsize} -i {simDirList[0]}/Turb_hdf5_plt_cnt_0000 -d dens -verbose 2 -outtype pdf -outdir {outdir} -outname {type}Bar -ncpu 1 -colorbar "only" -vmin {vmin} -vmax {vmax} -cmap_label "\$E_\\mathrm{{{type}}}/E_\\mathrm{{{type},\,total}}\$ (Projection length \$z=L\$)" -cmap {cbar_type} &>/dev/null'
+    if len(simDirList) > 3:
+        cbarCmd = f'python3 {PYTHON_PATH}/flashplotlib.py -fontsize {fontsize} -i {simDirList[0]}/Turb_hdf5_plt_cnt_0000 -d dens -verbose 2 -outtype pdf -outdir {outdir} -outname {type}Bar -ncpu 1 -colorbar "panels2 only" -vmin {vmin} -vmax {vmax} -cmap_label "\$E_\\mathrm{{{type}}}/E_\\mathrm{{{type},\,total}}\$ (Projection length \$z=L\$)" -cmap {cbar_type} &>/dev/null'
     os.system(cbarCmd)
 
 
@@ -188,12 +192,31 @@ def main(args):
     simList = [sim for sim in args.i if os.path.isdir(sim)]
     outdir = args.o
 
+    if args.t is None and args.r is None:
+        print("Invalid arguments. Please provide either -t or -r")
+        sys.exit(1)
+    if args.t is not None and args.r is not None:
+        print("Invalid arguments. Please provide either -t or -r")
+        sys.exit(1)
+
     if args.kin:
-        makePlots(simList, "kin", args.kin_stream, args.r, args.stf, args.lf, outdir, args.cbar_type, args.redo, args.fontsize, args.clow, args.chigh)
+        if args.t is not None:
+            val = args.t
+            usetime = True
+        else:
+            val = args.r
+            usetime = False
+        makePlots(simList, "kin", args.kin_stream, val, args.stf, args.lf, outdir, args.cbar_type, args.redo, usetime, args.fontsize, args.clow, args.chigh)
         if args.table:
             makeTable(simList, outdir, "kin")
     if args.mag:
-        makePlots(simList, "mag", args.mag_stream, args.r, args.stf, args.lf, outdir, args.cbar_type, args.redo, args.fontsize, args.clow, args.chigh)
+        if args.t is not None:
+            val = args.t
+            usetime = True
+        else:
+            val = args.r
+            usetime = False
+        makePlots(simList, "mag", args.mag_stream, val, args.stf, args.lf, outdir, args.cbar_type, args.redo, usetime, args.fontsize, args.clow, args.chigh)
         if args.table:
             makeTable(simList, outdir, "mag")
 
@@ -203,7 +226,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Automate production grade plots")
     parser.add_argument("-i", type=str, nargs="*", help="Input Directories")
     parser.add_argument("-o", type=str, default="./", help="Output Directory")
-    parser.add_argument("-r", type=float, default=1e-4, help="Energy ratio for projections")
+    parser.add_argument("-r", type=float, default=None, help="Energy ratio for projections")
+    parser.add_argument("-t", type=float, default=None, help="Time for projections")
     parser.add_argument("-stf", type=float, nargs="*", default=[3.0], help="Start time for looking for ratio")
     parser.add_argument("-lf", type=float, nargs="*", default=[1e-7], help="Lower bound for looking for ratio")
     parser.add_argument("-kin", action='store_true', help="Plot kinetic energy")
@@ -217,108 +241,10 @@ if __name__ == "__main__":
     parser.add_argument("-redo", action='store_true', help="Redo the bounds calculation")
     parser.add_argument("-fontsize", type=float, default=1.5, help="Fontsize to pass to flashplotlib")
 
-    commonKeys = ["r", "o", "kin", "mag", "cbar_type", "kin_stream", "mag_stream", "table", "redo", "fontsize", "clow", "chigh"]
+    commonKeys = ["r", "o", "kin", "mag", "cbar_type", "kin_stream", "mag_stream", "table", "redo", "fontsize", "clow", "chigh", "t"]
 
     args = parseArgs(parser.parse_args(), commonKeys)
 
     print(args)
 
     main(args)
-
-
-
-
-######################################################################
-                                #OLD CODE
-# import matplotlib.pyplot as pl
-# import matplotlib.image as mpimg
-# from matplotlib.gridspec import GridSpec
-
-
-# def getGrid():
-#     fig = pl.figure(figsize=(21.0, 10.0))
-#     gs1 = GridSpec(2, 3, figure=fig, width_ratios=[6.5, 6.5, 6.5], height_ratios=[1, 1])
-#     gs2 = GridSpec(1, 1, figure=fig)
-
-#     # Add images to the grid
-#     axes = [
-#         fig.add_subplot(gs1[0, 0]),
-#         fig.add_subplot(gs1[0, 1]),
-#         fig.add_subplot(gs1[0, 2]),
-#         fig.add_subplot(gs1[1, 0]),
-#         fig.add_subplot(gs1[1, 1]),
-#         fig.add_subplot(gs1[1, 2]),
-#         fig.add_subplot(gs2[0, 0])
-#     ]
-
-#     gs1.update(right=0.8, wspace=-0.4, hspace=0.03)
-#     gs2.update(left=0.62)
-
-#     return fig, axes
-
-# def addImage(ax, dirPath, solver, xlabel, ylabel, xtick, ytick, type):
-#     ax.imshow(mpimg.imread(f"{dirPath}/{solver}-{type}.pdf"), extent=[-0.52, 0.52, -0.52, 0.52])
-#     ax.set_xlabel(xlabel)
-#     ax.set_ylabel(ylabel)
-#     ax.set_xticks(xtick)
-#     ax.set_yticks(ytick)
-#     ax.set_xticklabels(xtick)
-#     ax.set_yticklabels(ytick)
-#     ax.set_frame_on(False)
-#     ax.tick_params(axis="x", which='both', bottom=False, top=False)
-#     ax.tick_params(axis="y", which='both', left=False, right=False)
-
-# def makeCBar(ax, dirPath, type):
-#     ax.imshow(mpimg.imread(f"{dirPath}/{type}Bar.pdf"))
-#     ax.set_frame_on(False)
-#     ax.tick_params(axis="x", which='both', bottom=False, top=False)
-#     ax.tick_params(axis="y", which='both', left=False, right=False)
-#     ax.set_xticks([])
-#     ax.set_yticks([])
-#     ax.set_xticklabels([])
-#     ax.set_yticklabels([])
-
-
-# def main():
-
-
-
-    # Do data stuff here
-
-
-
-    # kinFig, kinAxes = getGrid()
-    # magFig, magAxes = getGrid()
-
-
-    # xtick = [-0.4, 0, 0.4]
-    # ytick = [-0.4, 0, 0.4]
-    # xlabel = r"x/L"
-    # ylabel = r"y/L"
-    # kinAxesDict = {"Split-Roe": kinAxes[0], "Split-Bouchut": kinAxes[1], "USM-Roe": kinAxes[2],
-    #             "USM-HLLD": kinAxes[3], "USM-HLLC": kinAxes[4], "USM-BK": kinAxes[5], "cBar": kinAxes[6]}
-    # magAxesDict = {"Split-Roe": magAxes[0], "Split-Bouchut": magAxes[1], "USM-Roe": magAxes[2],
-    #             "USM-HLLD": magAxes[3], "USM-HLLC": magAxes[4], "USM-BK": magAxes[5], "cBar": magAxes[6]}
-    # xtickDict = {"Split-Roe": [], "Split-Bouchut": [], "USM-Roe": [],
-    #             "USM-HLLD": xtick, "USM-HLLC": xtick, "USM-BK": xtick}
-    # ytickDict = {"Split-Roe": ytick, "Split-Bouchut": [], "USM-Roe": [],
-    #             "USM-HLLD": ytick, "USM-HLLC": [], "USM-BK": []}
-    # xlabelDict = {"Split-Roe": "", "Split-Bouchut": "", "USM-Roe": "",
-    #                 "USM-HLLD": xlabel, "USM-HLLC": xlabel, "USM-BK": xlabel}
-    # ylabelDict = {"Split-Roe": ylabel, "Split-Bouchut": "", "USM-Roe": "",
-    #                 "USM-HLLD": ylabel, "USM-HLLC": "", "USM-BK": ""}
-
-    # for index, sim in enumerate(simList):
-    #     infoDict = getInfoDict(sim)
-    #     solver = solverDict[infoDict["solver"]]
-    #     addImage(kinAxesDict[solver], args.o, solver, xlabelDict[solver], ylabelDict[solver], xtickDict[solver], ytickDict[solver], "kinetic")
-    #     addImage(magAxesDict[solver], args.o, solver, xlabelDict[solver], ylabelDict[solver], xtickDict[solver], ytickDict[solver], "magnetic")
-
-    # makeCBar(kinAxesDict["cBar"], args.o, "kin")
-    # makeCBar(magAxesDict["cBar"], args.o, "mag")
-
-    # kinFig.savefig(f"{args.o}/kinetics.pdf", dpi=300, bbox_inches="tight")
-    # magFig.savefig(f"{args.o}/magnetics.pdf", dpi=300, bbox_inches="tight")
-
-
-######################################################################
