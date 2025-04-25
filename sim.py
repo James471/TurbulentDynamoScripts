@@ -96,7 +96,7 @@ def createSimulationObjectDirectory(args):
 
     createSimulationCmd = (
         FLASH_PATH
-        + "/setup StirFromFile -auto -objdir="
+        + "/setup Stir -auto -objdir="
         + objDirectory
         + " -3d -nxb="
         + str(args.nxb)
