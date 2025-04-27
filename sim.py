@@ -107,7 +107,7 @@ def createSimulationObjectDirectory(args):
         + " +ug "
         + solverSetupParams
         + otherParams
-        + " +stir_ics -parfile=flash.par.james -debug"
+        + " +stir_ics -parfile=flash.par.james"
     )
     print("Running:", createSimulationCmd)
     os.system(createSimulationCmd)
