@@ -254,8 +254,8 @@ def createFlashPar(args):
     checkpointFileIntervalStep  = 0
     plotFileIntervalStep	    = 0
 
-    wall_clock_time_limit = 160000.0
-    wall_clock_checkpoint = 21600.0
+    wall_clock_time_limit = 43200.0
+    wall_clock_checkpoint = 18000.0
     wr_integrals_freq = 1
 
     dtinit = 1.e-4
