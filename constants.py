@@ -4,6 +4,8 @@ V_RMS_COLUMN_INDEX = 13
 TIME_COLUMN_INDEX = 0
 Cs_RMS_COLUMN_INDEX = 14
 
+JOB_TEMPLATE_PATH = "/dss/dsshome1/08/di97zay/job_template.sh"
+
 
 SOLVER_DICT = {"8wave": "Split-Roe", "bouchut-split": "Split-Bouchut", "Roe": "USM-Roe", 
               "HLLD": "USM-HLLD", "HLLC": "USM-HLLC", "bk-usm": "USM-BK"}

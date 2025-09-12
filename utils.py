@@ -3,6 +3,8 @@ import pickle
 import numpy as np
 from constants import *
 
+import tempfile
+
 
 def getSolverSortedList(pathList):
     order = []
@@ -60,10 +62,9 @@ def getInfoDict(sim):
         raise Exception("No info.pkl file found in " + sim)
     
 
-def argsToOutdirName(args):
+def argsToSimDir(args):
     outputDirName = (
-        args.outdir
-        + "/Turb_v"
+        "/Turb_v"
         + str(args.v)
         + "_auto-adj"
         + str(args.auto_adjust)
@@ -110,9 +111,12 @@ def argsToOutdirName(args):
         outputDirName += "_" + args.extra
     return outputDirName
 
+def argsToOutdirName(args):
+    outputDirName = args.outdir + argsToSimDir(args)
+    return outputDirName
 
 def argsToSimulationObjectDirectory(args):
-    return argsToOutdirName(args) + "/objStirFromFile"
+    return tempfile.gettempdir() + "/" + argsToSimDir(args) + "_objStirFromFile"
 
 
 Object = lambda **kwargs: type("Object", (), kwargs)

@@ -7,7 +7,9 @@ import socket
 import textwrap
 import numpy as np
 import utils
+import constants
 from myconfig import *
+from string import Template
 
 
 def argsToSolverSetupParams(args):
@@ -254,8 +256,8 @@ def createFlashPar(args):
     checkpointFileIntervalStep  = 0
     plotFileIntervalStep	    = 0
 
-    wall_clock_time_limit = 43200.0
-    wall_clock_checkpoint = 18000.0
+    wall_clock_time_limit = 169200.0
+    wall_clock_checkpoint = 36000.0
     wr_integrals_freq = 1
 
     dtinit = 1.e-4
@@ -279,7 +281,7 @@ def createFlashPar(args):
     {isoConst}
     eintSwitch      = 0
     cfl             = {args.cfl}
-    nend            = 1000000
+    nend            = 50000000
 
     # magnetic fields
     flux_correct          = .true.
@@ -299,6 +301,9 @@ def createFlashPar(args):
     iProcs = {args.iprocs}      #num procs in i direction
     jProcs = {args.jprocs}      #num procs in j direction
     kProcs = {args.kprocs}
+
+    log_frequency = {args.log_freq}
+    wr_integrals_frequency = {args.wr_integ_freq}
 
 
     # When using UG, iProcs, jProcs and kProcs must be specified.
@@ -376,18 +381,52 @@ def createFlashSymLink(args):
     # If the target of a symbolic link is a relative path, it's interpreted relative to the
     # directory containing the link, not the directory you were in when you created it.
     os.system(
-        "ln -sv objStirFromFile/flash4 " + utils.argsToOutdirName(args) + "/flash4"
+        # "ln -sv objStirFromFile/flash4 " + utils.argsToOutdirName(args) + "/flash4"
+        f"cp {utils.argsToSimulationObjectDirectory(args)}/flash4 " + utils.argsToOutdirName(args) + "/flash4"
     )
 
 
 def runSimulation(args):
     currentPath = os.getcwd()
     os.chdir(utils.argsToOutdirName(args))
-    # Hacky
-    if "nid" in socket.gethostname():
-        os.system(f"srun -N {os.environ['SLURM_JOB_NUM_NODES']} -n {os.environ['SLURM_NTASKS']} -c {os.environ['OMP_NUM_THREADS']} flash4")
+    if args.interactive == "true" or args.interactive == "True":
+        # Hacky
+        if "setonix" in socket.gethostname():
+            os.system(f"srun -n {args.iprocs * args.jprocs * args.kprocs} flash4")
+        elif "di97zay" in os.environ.get("USER"):
+            print("About to srun")
+            os.system(f"srun -A pr32lo --ntasks={args.iprocs * args.jprocs * args.kprocs} --time={args.time} --partition={args.partition} ./flash4")
+        else:
+            os.system("mpirun -np " + str(args.iprocs * args.jprocs * args.kprocs) + " flash4")
     else:
-        os.system("mpirun -np " + str(args.iprocs * args.jprocs * args.kprocs) + " flash4")
+        if "nid" in socket.gethostname():
+            jobCommand = f"srun ./flash4"
+            max_ntasks_per_node = 128
+        elif "di97zay" in os.environ.get("USER"):
+            jobCommand = f"srun ./flash4"
+            max_ntasks_per_node = 48
+        else:
+            max_ntasks_per_node = 48
+            jobCommand = f"mpirun -np {args.iprocs * args.jprocs * args.kprocs} flash4"
+        jobScriptPath = utils.argsToOutdirName(args) + "/job.sh"
+        with open(args.job_template) as f:
+            tmpl = Template(f.read())
+        jobScriptContent = tmpl.substitute(
+            job_name=args.job_name,
+            partition=args.partition,
+            time=args.time,
+            job_command=jobCommand,
+            outdir=utils.argsToOutdirName(args),
+            ntasks=args.iprocs * args.jprocs * args.kprocs,
+            ntasks_per_node=args.iprocs * args.jprocs * args.kprocs if args.iprocs * args.jprocs * args.kprocs <= max_ntasks_per_node else max_ntasks_per_node,
+        )
+        jobScriptContent = textwrap.dedent(jobScriptContent).strip()
+        print("Job script content:")
+        print(jobScriptContent)
+        with open(jobScriptPath, "w") as jobScriptFile:
+            jobScriptFile.write(jobScriptContent)
+        os.system(f"sbatch {jobScriptPath}")
+
     os.chdir(currentPath)
 
 
@@ -404,7 +443,7 @@ def main(args):
     createTurbGenPar(args)
     print("Creating flash executable")
     createFlashExec(args)
-    print("Creating symbolic link to flash executable")
+    print("Copying flash executable to output directory")
     createFlashSymLink(args)
     print("Running simulation")
     runSimulation(args)
@@ -477,6 +516,13 @@ if __name__ == "__main__":
     parser.add_argument(
         "-nzb", default=32, type=int, help="Number of blocks in k-direction"
     )
+    parser.add_argument("-log_freq", default=1, help="Frequency of writing to log file")
+    parser.add_argument("-wr_integ_freq", default=1, help="Frequency of writing integral quantities")
+    parser.add_argument("-interactive", default="false", type=str, help="Run in interactive mode, default is false")
+    parser.add_argument("-job_template", default=constants.JOB_TEMPLATE_PATH, help="Path to job template script")
+    parser.add_argument("-job_name", default="Turbulent Dynamo", help="Name of the job")
+    parser.add_argument("-partition", default="general", help="Partition to run the job on")
+    parser.add_argument("-time", default="00:10:00", help="Time limit for the job")
     parser.add_argument(
         "-extra", type=str, help="Extra arguments to pass to the simulation. This gets stored in info.pkl and goes into the directory name."
     )
