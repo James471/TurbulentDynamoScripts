@@ -151,10 +151,16 @@ def createInfoDumpFile(args):
 
 
 def createFlashPar(args):
+    def hms_to_seconds(hms):
+        h, m, s = map(int, hms.split(":"))
+        return h * 3600 + m * 60 + s
+
     turnOverTime = 1 / (2 * args.v)
     tmax = args.nt * turnOverTime
     checkpointFileIntervalTime = args.dt * turnOverTime
     plotFileIntervalTime = args.dt * turnOverTime
+    jobTime = hms_to_seconds(args.time)
+    walltimeLimit = round(0.95 * jobTime)
 
     if args.eos == "iso":
         isoConst = "IsothermalKonst= 1.0 # (cs^2)"
@@ -256,11 +262,12 @@ def createFlashPar(args):
     checkpointFileIntervalStep  = 0
     plotFileIntervalStep	    = 0
 
-    wall_clock_time_limit = 169200.0
-    wall_clock_checkpoint = 36000.0
-    wr_integrals_freq = 1
+    wall_clock_time_limit = {walltimeLimit}
+    wall_clock_checkpoint = 180000.0
+    wr_integrals_freq = {args.wr_integ_freq}
+    log_frequency = {args.log_freq}
 
-    dtinit = 1.e-4
+    dtinit = 1.e-6
     dtmin  = 1.e-99  # This parameter must be << minimum timestep
                     #  in order to avoid numerical instability
     smallt = 1.e-99
@@ -301,9 +308,6 @@ def createFlashPar(args):
     iProcs = {args.iprocs}      #num procs in i direction
     jProcs = {args.jprocs}      #num procs in j direction
     kProcs = {args.kprocs}
-
-    log_frequency = {args.log_freq}
-    wr_integrals_frequency = {args.wr_integ_freq}
 
 
     # When using UG, iProcs, jProcs and kProcs must be specified.
