@@ -6,13 +6,11 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as pl
 from scipy.optimize import curve_fit
-
 from constants import *
 from datautils import *
 from utils import *
 from myconfig import *
 import designParams
-
 sys.path.append(PYTHON_PATH)
 import cfpack as cfp
 

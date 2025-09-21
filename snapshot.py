@@ -36,13 +36,15 @@ def getSnapshotInfo(turbFile, velocity, val, usetime, stf, lf, simDir, type):
     t = getNonDimensionalTime(turbFile, velocity)
     ratio = getEMagOverEKin(turbFile)
     transientMask = (t > stf) & (ratio > lf)
+    # stop()
     if usetime:
         location = np.argmin(np.abs(t[transientMask] - val))
     else:
         location = np.argmin(np.abs(ratio[transientMask] - val))
     snapshotTime = t[transientMask][location]
 
-    plotFileList = [f for f in os.listdir(simDir) if f.startswith("Turb_hdf5_plt_cnt_")]
+    pltfileRe = re.compile(r"Turb_hdf5_plt_cnt_\d\d\d\d$")
+    plotFileList = [f for f in os.listdir(simDir) if pltfileRe.match(f)]
     plotFileList.sort()
     timeList = []
     for plotFile in plotFileList:
@@ -91,7 +93,7 @@ def makePlots(simDirList, type, stream_var, val, stf, lf, outdir, cbar_type, red
             print(f"Processing for {solver}")
 
             print("Loading Turb.dat")
-            n, s = getNForTurbDat(simDir, res=5e-1, stop=10)
+            n, s = getNForTurbDat(simDir, res=5e-1, stop=50)
             turbFile = loadFile(simDir + "/Turb.dat", 10, n, s)
             print("Loaded Turb.dat")
 
@@ -137,7 +139,8 @@ def makePlots(simDirList, type, stream_var, val, stf, lf, outdir, cbar_type, red
         plotFile = plotFileDict[solver]["plotFile"]
         eTot = plotFileDict[solver][f"e{type.capitalize()}Tot"]
 
-        cmd = f'python3 {PYTHON_PATH}/flashplotlib.py -fontsize {fontsize} -i {plotFile} -d {datasetName} -verbose 2 -outtype pdf -outdir {outdir} -outname {solver}-{type} -direction z -ncpu 1 -colorbar 0 -vmin {vMin} -vmax {vMax} -axes_label "{X_LABEL_DICT[solver]}" "{Y_LABEL_DICT[solver]}" "" -axes_unit "" "" "" -plotlabel {solver} -time_unit t_{{turb}} -labels_inside -time_scale {getTurnOverTime(velocity)} -axes_format {X_TICK_DICT[solver]} {Y_TICK_DICT[solver]} -data_transform q/{eTot} -cmap {cbar_type} {streamStr} &>/dev/null'
+        cmd = f'python3 {PYTHON_PATH}/flashplotlib.py -fontsize {fontsize} -i {plotFile} -d {datasetName} -verbose 2 -outtype pdf -outdir {outdir} -outname {solver}-{type} -direction z -ncpu 1 -colorbar 0 -vmin {vMin} -vmax {vMax} -axes_label "{X_LABEL_DICT[solver]}" "{Y_LABEL_DICT[solver]}" "" -axes_unit "" "" "" -plotlabel {solver} -time_unit t_{{turb}} -labels_inside -time_scale {0} -axes_format {X_TICK_DICT[solver]} {Y_TICK_DICT[solver]} -data_transform q/{eTot} -cmap {cbar_type} {streamStr}'
+        print("Running:", cmd)
         os.system(cmd)
 
     print("Making colorbar")

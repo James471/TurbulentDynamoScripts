@@ -8,7 +8,7 @@ rcParams['text.latex.preamble'] = r'\usepackage{bm}'
 # basics
 rcParams['lines.linewidth'] = 1.2
 rcParams['font.family'] = 'Arial'
-rcParams['font.size'] = 15
+rcParams['font.size'] = 17
 rcParams['axes.linewidth'] = 0.8
 # x-ticks
 rcParams['xtick.top'] = True

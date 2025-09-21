@@ -34,12 +34,13 @@ def getEMagOverEKin(f):
     return (getEMag(f) / getEKin(f)).flatten()
 
 
-def loadFile(path, shift=0, n=1,stop=None):
+def loadFile(path, shift=0, n=1, stop=None):
     #Loads every nth row
     if n == 1:
         return np.loadtxt(path, unpack=True, skiprows=shift)
     else:
         with open(path, "r") as f:
+            print(shift, stop, n)
             iterator = itertools.islice(f, shift, stop, n)
             return np.loadtxt(iterator, unpack=True)
         

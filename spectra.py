@@ -79,8 +79,9 @@ def generateSpectra(simDir, verbose, spectType, infoDict, lf, uf, stf, nProcs=1)
     else:
         print("Turb.dat_cleaned already exists")
 
-    n = getNForTurbDat(simDir, res=5e-2, filename="Turb.dat_cleaned")
+    n, _ = getNForTurbDat(simDir, res=5e-2, filename="Turb.dat_cleaned")
     if verbose > 0: print("Loading cleaned turb.dat")
+    print(simDir)
     dat = loadFile(simDir + "/Turb.dat_cleaned", shift=10, n=n)
     if verbose > 0: print("Loaded Turb.dat_cleaned")
 
@@ -249,6 +250,8 @@ def fit_func(ax, spectType, simDir, kFit, log10PTotFit, deltaLog10PTotFit, param
         k_eta_23_neg_er = np.percentile(kList, 16) - k_eta_23
         fitDict["k_eta_23"] = (k_eta_23, k_eta_23_neg_er, k_eta_23_pos_er)
         print(f"{infoDict['solver']}: {k_eta_23:.2f}^{{{k_eta_23_pos_er:.2f}}}_{{{k_eta_23_neg_er:.2f}}}")
+        with open(simDir+"/res_scl.pkl", "wb") as f:
+            pickle.dump(kList, f)
 
     elif spectType == "vels":
         if verbose: print("Kin Spectra-> Fitting for:", infoDict['solver'])
@@ -282,6 +285,8 @@ def fit_func(ax, spectType, simDir, kFit, log10PTotFit, deltaLog10PTotFit, param
                 print(f"{labels[i]} = {mcmc[1]:.3f}_{{-{qrt[0]:.3f}}}^{{{qrt[1]:.3f}}}")
             fitDict[labels[i]] = (mcmc[1], -qrt[0], qrt[1])
             params.append(mcmc[1])
+        with open(simDir+"/k_nu_sample.pkl", "wb") as f:
+            pickle.dump(flat_samples[:, 3]**(1/flat_samples[:, 4]), f)
         ax.plot(kFit, fact * 10**Log10_P_kin(kFit, *(params)) * compensateFitFact, color="black")
     
     return fitDict
@@ -324,7 +329,7 @@ def postPlot(ax, spectType, showx=False, compensated=False):
 def plotScaleLoc(ax, solverFit, type, color_dict, printvals=True):
     ylim = ax.get_ylim()
     if type == "mags":
-        ax.plot([10, 10], [ylim[0], 2*ylim[0]], color="white", scaley=False)
+        # ax.plot([10, 10], [ylim[0], 2*ylim[0]], color="white", scaley=False)
         ax.text(10, 2.5*ylim[0], r"$k_\nu$", color="white")
         # maxKEta = 0
         # for solver in solverFit:
@@ -439,7 +444,7 @@ def main(config):
                 print("Using default kin dict")
             print(f"Using kinParams: {kinParams}")
             fitDict = plotSpectra(ax_kin_obj, sim_dir, verbose, "vels", fact, infoDict, kinParams, output_dir, compensate=False, fit=fit, color=color_list[index], label=label_list[index])
-            _ = plotSpectra(ax_kin_obj_comp, sim_dir, verbose, "vels", fact, infoDict, kinParams, output_dir, compensate=True, fit=False, color=color_list[index], label=label_list[index])
+            # _ = plotSpectra(ax_kin_obj_comp, sim_dir, verbose, "vels", fact, infoDict, kinParams, output_dir, compensate=True, fit=False, color=color_list[index], label=label_list[index])
             solverKinFit[infoDict['solver']] = fitDict
         xlabel, ylabel = postPlot(ax_kin_obj, "vels", showx, False)
         xlabel_comp, ylabel_comp = postPlot(ax_kin_obj_comp, "vels", showx, True)
@@ -448,10 +453,11 @@ def main(config):
         plotScaleLoc(ax_kin_obj_comp, solverKinFit, "vels", color_dict=color_dict, printvals=False)
         ax_kin_obj.set_xlabel(xlabel)
         ax_kin_obj.set_ylabel(ylabel)
+        ax_kin_obj.legend(loc="best")
         ax_kin_obj_comp.set_xlabel(xlabel_comp)
         ax_kin_obj_comp.set_ylabel(ylabel_comp)
-        ax_kin_obj_comp.legend(loc="best")
-        print("Saving Kinetic Spectra")
+        # ax_kin_obj_comp.legend(loc="best")
+        print(f"Saving Kinetic Spectra at {output_dir}/Kinetic_Spectra{oname}.pdf")
         ax_kin_obj.figure.savefig(f"{output_dir}/Kinetic_Spectra{oname}.pdf")
         ax_kin_obj_comp.figure.savefig(f"{output_dir}/Compensated_Kinetic_Spectra{oname}.pdf")
         # plKinObj.ax().figure.clf(); plKinObj.ax().cla(); pl.close(); plKinObj = None
