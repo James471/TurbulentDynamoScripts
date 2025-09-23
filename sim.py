@@ -403,33 +403,52 @@ def runSimulation(args):
         else:
             os.system("mpirun -np " + str(args.iprocs * args.jprocs * args.kprocs) + " flash4")
     else:
+        jobScriptPath = utils.argsToOutdirName(args) + "/job.sh"
+        with open(args.job_template) as f:
+            tmpl = Template(f.read())
+
         if "nid" in socket.gethostname():
             jobCommand = f"srun ./flash4"
             max_ntasks_per_node = 128
         elif "di97zay" in os.environ.get("USER"):
             jobCommand = f"srun ./flash4"
             max_ntasks_per_node = 48
+            jobScriptContent = tmpl.substitute(
+                job_name=args.job_name,
+                partition=args.partition,
+                time=args.time,
+                job_command=jobCommand,
+                outdir=utils.argsToOutdirName(args),
+                ntasks=args.iprocs * args.jprocs * args.kprocs,
+                ntasks_per_node=args.iprocs * args.jprocs * args.kprocs if args.iprocs * args.jprocs * args.kprocs <= max_ntasks_per_node else max_ntasks_per_node,
+            )
+            jobScriptContent = textwrap.dedent(jobScriptContent).strip()
+            print("Job script content:")
+            print(jobScriptContent)
+            with open(jobScriptPath, "w") as jobScriptFile:
+                jobScriptFile.write(jobScriptContent)
+            os.system(f"sbatch {jobScriptPath}")
         else:
             max_ntasks_per_node = 48
-            jobCommand = f"mpirun -np {args.iprocs * args.jprocs * args.kprocs} flash4"
-        jobScriptPath = utils.argsToOutdirName(args) + "/job.sh"
-        with open(args.job_template) as f:
-            tmpl = Template(f.read())
-        jobScriptContent = tmpl.substitute(
-            job_name=args.job_name,
-            partition=args.partition,
-            time=args.time,
-            job_command=jobCommand,
-            outdir=utils.argsToOutdirName(args),
-            ntasks=args.iprocs * args.jprocs * args.kprocs,
-            ntasks_per_node=args.iprocs * args.jprocs * args.kprocs if args.iprocs * args.jprocs * args.kprocs <= max_ntasks_per_node else max_ntasks_per_node,
-        )
-        jobScriptContent = textwrap.dedent(jobScriptContent).strip()
-        print("Job script content:")
-        print(jobScriptContent)
-        with open(jobScriptPath, "w") as jobScriptFile:
-            jobScriptFile.write(jobScriptContent)
-        os.system(f"sbatch {jobScriptPath}")
+            jobCommand = f"mpirun -np {args.iprocs * args.jprocs * args.kprocs} ./flash4"
+            ncpus = args.iprocs * args.jprocs * args.kprocs
+            if ncpus > max_ntasks_per_node and ncpus % max_ntasks_per_node != 0:
+                ncpus = ((ncpus // max_ntasks_per_node) + 1) * max_ntasks_per_node
+            jobScriptContent = tmpl.substitute(
+                job_name=args.job_name,
+                partition=args.partition,
+                time=args.time,
+                job_command=jobCommand,
+                outdir=utils.argsToOutdirName(args),
+                ncpus=str(ncpus),
+                mem=str(ncpus * 2)+"GB",
+            )
+            jobScriptContent = textwrap.dedent(jobScriptContent).strip()
+            print("Job script content:")
+            print(jobScriptContent)
+            with open(jobScriptPath, "w") as jobScriptFile:
+                jobScriptFile.write(jobScriptContent)
+            os.system(f"qsub {jobScriptPath}")
 
     os.chdir(currentPath)
 
@@ -523,9 +542,9 @@ if __name__ == "__main__":
     parser.add_argument("-log_freq", default=1, help="Frequency of writing to log file")
     parser.add_argument("-wr_integ_freq", default=1, help="Frequency of writing integral quantities")
     parser.add_argument("-interactive", default="false", type=str, help="Run in interactive mode, default is false")
-    parser.add_argument("-job_template", default=constants.JOB_TEMPLATE_PATH, help="Path to job template script")
+    parser.add_argument("-job_template", default=JOB_TEMPLATE_PATH, help="Path to job template script")
     parser.add_argument("-job_name", default="Turbulent Dynamo", help="Name of the job")
-    parser.add_argument("-partition", default="general", help="Partition to run the job on")
+    parser.add_argument("-partition", default=DEFAULT_PARTITION, help="Partition to run the job on")
     parser.add_argument("-time", default="00:10:00", help="Time limit for the job")
     parser.add_argument(
         "-extra", type=str, help="Extra arguments to pass to the simulation. This gets stored in info.pkl and goes into the directory name."
